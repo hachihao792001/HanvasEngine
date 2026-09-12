@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8" />
+	<title>3D Engine</title>
+</head>
+
+<body style="text-align: center; background: #f0f0f0">
+	<h1>3D Engine</h1>
+	<canvas id="gameCanvas" width="400" height="300" style="border: 2px solid #aaa; background: #fff"></canvas>
+	<h2 id="fps">FPS: 0</h2>
+	<div>
+		Directional light intensity:
+		<input type="range" id="dirIntensity" min="0" max="5" step="0.1" value="1" />
+		<span id="dirIntensityText" class="slider-value">1.0</span>
+	</div>
+	<div>
+		Directional light rotate speed:
+		<input type="range" id="dirRotateSpeed" min="0" max="50" step="0.1" value="10" />
+		<span id="dirRotateSpeedText" class="slider-value">10</span>
+	</div>
+	<div>
+		Point light intensity:
+		<input type="range" id="pointIntensity" min="0" max="5" step="0.1" value="1" />
+		<span id="pointIntensityText" class="slider-value">1.0</span>
+	</div>
+	<div>
+		Shadow:
+		<input type="checkbox" id="useShadow" checked="checked" />
+	</div>
+
+    <script src="index.js" type="module"></script>
+</body>
+
+</html>
