@@ -3,8 +3,10 @@ import { Cube, ObjMesh } from "./mesh.js";
 import { Color, Texture } from "./graphics.js";
 import { Camera, GameObject, DirectionalLight, Rasterizer } from "./engine.js";
 
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
+/** @typedef {import("./mesh.js").Triangle} Triangle */
+
+const canvas = /** @type {HTMLCanvasElement} */ (document.getElementById("gameCanvas"));
+const ctx = /** @type {CanvasRenderingContext2D} */ (canvas.getContext("2d"));
 const rasterizer = new Rasterizer(canvas, ctx);
 const fov = 60;
 let znear = 0.01,
@@ -12,26 +14,27 @@ let znear = 0.01,
 let projectionMatrix = Mat4x4.Projection(fov, canvas.height, canvas.width, znear, zfar);
 let camera = new Camera(new Vector3(0, 10, -10), new Vector3(-25, 0, 0), 2, 0.2);
 let nearPlane = new Plane(Vector3.forward, new Vector3(0, 0, znear));
-let keyStates = [];
+/** @type {Record<string, boolean>} */
+let keyStates = {};
 
-const fpsInfo = document.getElementById("fps");
+const fpsInfo = /** @type {HTMLElement} */ (document.getElementById("fps"));
 let frames = 0,
     fpsTimeCounter = 0;
 
-const lightDirIntensitySlider = document.getElementById("dirIntensity");
-const lightDirIntensityText = document.getElementById("dirIntensityText");
-const lightDirRotateSpeedSlider = document.getElementById("dirRotateSpeed");
-const lightDirRotateSpeedText = document.getElementById("dirRotateSpeedText");
+const lightDirIntensitySlider = /** @type {HTMLInputElement} */ (document.getElementById("dirIntensity"));
+const lightDirIntensityText = /** @type {HTMLElement} */ (document.getElementById("dirIntensityText"));
+const lightDirRotateSpeedSlider = /** @type {HTMLInputElement} */ (document.getElementById("dirRotateSpeed"));
+const lightDirRotateSpeedText = /** @type {HTMLElement} */ (document.getElementById("dirRotateSpeedText"));
 let dirLightDefaultDir = new Vector3(-1, -1, -1);
 let dirLight = new DirectionalLight(dirLightDefaultDir, parseFloat(lightDirIntensitySlider.value));
 let dirLightRotation = Quaternion.buildQuaternionEuler(Vector3.zero);
 let dirLightRotateSpeed = parseFloat(lightDirRotateSpeedSlider.value);
 
-const pointLightIntensitySlider = document.getElementById("pointIntensity");
-const pointLightIntensityText = document.getElementById("pointIntensityText");
+const pointLightIntensitySlider = /** @type {HTMLInputElement} */ (document.getElementById("pointIntensity"));
+const pointLightIntensityText = /** @type {HTMLElement} */ (document.getElementById("pointIntensityText"));
 let pointLightIntensity = parseFloat(pointLightIntensitySlider.value);
 
-const shadowCheckbox = document.getElementById("useShadow");
+const shadowCheckbox = /** @type {HTMLInputElement} */ (document.getElementById("useShadow"));
 let useShadow = true;
 
 let brickTexture = new Texture(
@@ -77,7 +80,9 @@ function updateGameObjectTransforms() {
     dirLight.dir = dirLightRotation.rotateVector(dirLightDefaultDir);
 }
 
+/** @returns {Triangle[]} */
 function gameObjectToWorldSpaceTriangles() {
+    /** @type {Triangle[]} */
     let objectTris = [];
     objectTris.push(...ground.getTransformedTriangles());
     objectTris.push(...lightCube.getTransformedTriangles());
@@ -86,9 +91,14 @@ function gameObjectToWorldSpaceTriangles() {
     return objectTris;
 }
 
+/**
+ * @param {Triangle[]} objectTris
+ * @returns {Triangle[]}
+ */
 function objectSpaceToViewSpace(objectTris) {
     const viewMat = camera.getViewMatrix();
 
+    /** @type {Triangle[]} */
     let visibleTris = [];
     for (let tri of objectTris) {
         if (Vector3.dot(tri.getNormal(), Vector3.sub(tri.getCenter(), camera.pos)) < 0) {
@@ -100,6 +110,7 @@ function objectSpaceToViewSpace(objectTris) {
     return visibleTris;
 }
 
+/** @param {Triangle[]} visibleTris */
 function viewSpaceToClipSpace(visibleTris) {
     for (let tri of visibleTris) {
         tri.mulMat4x4(projectionMatrix);
@@ -107,12 +118,14 @@ function viewSpaceToClipSpace(visibleTris) {
     }
 }
 
+/** @param {Triangle[]} visibleTris */
 function rasterize(visibleTris) {
     rasterizer.clearScreen();
     rasterizer.rasterizeClipSpaceTriangles(visibleTris, dirLight, pointLightIntensity, lightCube.pos, useShadow);
     rasterizer.drawCall();
 }
 
+/** @param {number} [time] */
 function update(time = performance.now()) {
     dt = (time - lastTime) / 1000;
     lastTime = time;

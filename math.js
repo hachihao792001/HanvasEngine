@@ -1,10 +1,21 @@
 export class MathExtend {
+    /**
+     * @param {Vector3} v0
+     * @param {Vector3} v1
+     * @param {Vector3} p
+     * @returns {number}
+     */
     static edgeFunction(v0, v1, p) {
         return (v0.y - v1.y) * (p.x - v0.x) + (v1.x - v0.x) * (p.y - v0.y);
     }
 }
 
 export class Vector2 {
+    /**
+     * @param {number} [u]
+     * @param {number} [v]
+     * @param {number} [w]
+     */
     constructor(u = 0, v = 0, w = 1) {
         this.u = u;
         this.v = v;
@@ -13,15 +24,30 @@ export class Vector2 {
     clone() {
         return new Vector2(this.u, this.v, this.w);
     }
+    /**
+     * @param {Vector2} vec
+     * @param {number} value
+     */
     static div(vec, value) {
         return new Vector2(vec.u / value, vec.v / value, vec.w / value);
     }
+    /**
+     * @param {Vector2} vec1
+     * @param {Vector2} vec2
+     * @param {number} t
+     */
     static lerp(vec1, vec2, t) {
         return new Vector2(vec1.u + (vec2.u - vec1.u) * t, vec1.v + (vec2.v - vec1.v) * t, vec1.w + (vec2.w - vec1.w) * t);
     }
 }
 
 export class Vector3 {
+    /**
+     * @param {number} [x]
+     * @param {number} [y]
+     * @param {number} [z]
+     * @param {number} [w]
+     */
     constructor(x = 0, y = 0, z = 0, w = 1) {
         this.x = x;
         this.y = y;
@@ -29,40 +55,81 @@ export class Vector3 {
         this.w = w;
     }
 
+    /** @type {Vector3} */
     static zero;
+    /** @type {Vector3} */
     static one;
+    /** @type {Vector3} */
     static left;
+    /** @type {Vector3} */
     static right;
+    /** @type {Vector3} */
     static up;
+    /** @type {Vector3} */
     static down;
+    /** @type {Vector3} */
     static forward;
 
     clone() {
         return new Vector3(this.x, this.y, this.z, this.w);
     }
 
+    /**
+     * @param {Vector3} vec1
+     * @param {Vector3} vec2
+     */
     static add(vec1, vec2) {
         return new Vector3(vec1.x + vec2.x, vec1.y + vec2.y, vec1.z + vec2.z);
     }
+    /**
+     * @param {Vector3} vec1
+     * @param {Vector3} vec2
+     */
     static sub(vec1, vec2) {
         return new Vector3(vec1.x - vec2.x, vec1.y - vec2.y, vec1.z - vec2.z);
     }
+    /**
+     * @param {Vector3} vec
+     * @param {number} value
+     */
     static mul(vec, value) {
         return new Vector3(vec.x * value, vec.y * value, vec.z * value);
     }
+    /**
+     * @param {Vector3} vec
+     * @param {number} value
+     */
     static div(vec, value) {
         return new Vector3(vec.x / value, vec.y / value, vec.z / value);
     }
+    /**
+     * @param {Vector3} vec1
+     * @param {Vector3} vec2
+     */
     static scale(vec1, vec2) {
         return new Vector3(vec1.x * vec2.x, vec1.y * vec2.y, vec1.z * vec2.z);
     }
+    /**
+     * @param {Vector3} v1
+     * @param {Vector3} v2
+     * @returns {number}
+     */
     static dot(v1, v2) {
         return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
     }
+    /**
+     * @param {Vector3} v1
+     * @param {Vector3} v2
+     */
     static cross(v1, v2) {
         let v = new Vector3(v1.y * v2.z - v1.z * v2.y, v1.z * v2.x - v1.x * v2.z, v1.x * v2.y - v1.y * v2.x);
         return v;
     }
+    /**
+     * @param {Vector3} v1
+     * @param {Vector3} v2
+     * @param {number} t
+     */
     static lerp(v1, v2, t) {
         return new Vector3(v1.x + (v2.x - v1.x) * t, v1.y + (v2.y - v1.y) * t, v1.z + (v2.z - v1.z) * t, v1.w + (v2.w - v1.w) * t);
     }
@@ -78,6 +145,7 @@ export class Vector3 {
         return this;
     }
 
+    /** @param {Mat4x4} m */
     mulMat4x4(m) {
         let x = this.x;
         let y = this.y;
@@ -99,6 +167,7 @@ Vector3.forward = new Vector3(0, 0, 1);
 
 export class Mat4x4 {
     constructor() {
+        /** @type {number[][]} */
         this.m = [
             [0, 0, 0, 0],
             [0, 0, 0, 0],
@@ -107,6 +176,13 @@ export class Mat4x4 {
         ];
     }
 
+    /**
+     * @param {number} fov
+     * @param {number} h
+     * @param {number} w
+     * @param {number} zNear
+     * @param {number} zFar
+     */
     static Projection(fov, h, w, zNear, zFar) {
         let fovMultiplier = 1.0 / Math.tan(((fov * 0.5) / 180.0) * Math.PI);
         let matrix = new Mat4x4();
@@ -118,6 +194,11 @@ export class Mat4x4 {
         return matrix;
     }
 
+    /**
+     * @param {number} size
+     * @param {number} zNear
+     * @param {number} zFar
+     */
     static Orthographic(size, zNear, zFar) {
         let matrix = new Mat4x4();
         matrix.m[0][0] = 2.0 / size;
@@ -128,6 +209,12 @@ export class Mat4x4 {
         return matrix;
     }
 
+    /**
+     * @param {Vector3} r
+     * @param {Vector3} u
+     * @param {Vector3} f
+     * @param {Vector3} t
+     */
     static View(r, u, f, t) {
         let matrix = new Mat4x4();
         matrix.m[0][0] = r.x;
@@ -146,6 +233,11 @@ export class Mat4x4 {
         return matrix;
     }
 
+    /**
+     * @param {number} x
+     * @param {number} y
+     * @param {number} z
+     */
     static Translation(x, y, z) {
         let matrix = new Mat4x4();
         matrix.m[0][0] = 1;
@@ -158,6 +250,11 @@ export class Mat4x4 {
         return matrix;
     }
 
+    /**
+     * @param {number} x
+     * @param {number} y
+     * @param {number} z
+     */
     static Scale(x, y, z) {
         let matrix = new Mat4x4();
         matrix.m[0][0] = x;
@@ -169,6 +266,12 @@ export class Mat4x4 {
 }
 
 export class Quaternion {
+    /**
+     * @param {number} [a]
+     * @param {number} [b]
+     * @param {number} [c]
+     * @param {number} [d]
+     */
     constructor(a = 1, b = 0, c = 0, d = 0) {
         this.a = a;
         this.b = b;
@@ -176,6 +279,10 @@ export class Quaternion {
         this.d = d;
     }
 
+    /**
+     * @param {Vector3} axis
+     * @param {number} angle
+     */
     static buildQuaternionAxisAngle(axis, angle) {
         let radian = (angle / 180.0) * Math.PI;
         const half = radian / 2;
@@ -183,6 +290,7 @@ export class Quaternion {
         return new Quaternion(Math.cos(half), axis.x * s, axis.y * s, axis.z * s);
     }
 
+    /** @param {Vector3} eulerAngles */
     static buildQuaternionEuler(eulerAngles) {
         const a = (eulerAngles.x / 180) * Math.PI * 0.5;
         const b = (eulerAngles.y / 180) * Math.PI * 0.5;
@@ -203,6 +311,10 @@ export class Quaternion {
         );
     }
 
+    /**
+     * @param {Quaternion} p
+     * @param {Quaternion} q
+     */
     static multiply(p, q) {
         let a = p.a * q.a - p.b * q.b - p.c * q.c - p.d * q.d;
         let b = p.a * q.b + p.b * q.a + p.c * q.d - p.d * q.c;
@@ -215,6 +327,7 @@ export class Quaternion {
         return new Quaternion(this.a, -this.b, -this.c, -this.d);
     }
 
+    /** @param {Vector3} v */
     rotateVector(v) {
         const qVec = new Quaternion(0, v.x, v.y, v.z);
         const res = Quaternion.multiply(Quaternion.multiply(this, qVec), this.conjugate());
@@ -223,16 +336,26 @@ export class Quaternion {
 }
 
 export class Plane {
+    /**
+     * @param {Vector3} normal
+     * @param {Vector3} P
+     */
     constructor(normal, P) {
         this.normal = normal.normalize();
         this.P = P;
         this.D = Vector3.dot(this.normal, this.P);
     }
 
+    /** @param {Vector3} p */
     isPointInFrontOfPlane(p) {
         return Vector3.dot(p, this.normal) >= this.D;
     }
 
+    /**
+     * @param {Vector3} A
+     * @param {Vector3} B
+     * @returns {[number, Vector3]} how far along AB the plane sits, and the intersection point
+     */
     intersectWithLine(A, B) {
         let An = Vector3.dot(A, this.normal);
         let Bn = Vector3.dot(B, this.normal);

@@ -1,11 +1,21 @@
 import { Color } from "./graphics.js";
 import { Vector2, Quaternion, Vector3, Mat4x4, MathExtend } from "./math.js";
 
+/** @typedef {import("./mesh.js").Mesh} Mesh */
+/** @typedef {import("./mesh.js").Triangle} Triangle */
+/** @typedef {import("./graphics.js").Texture} Texture */
+
 let shadowMapSize = 512;
 let shadowBias = 0.01;
 let shadowMapDistance = 20;
 
 export class Camera {
+    /**
+     * @param {Vector3} pos
+     * @param {Vector3} euler
+     * @param {number} speed
+     * @param {number} sensitivity
+     */
     constructor(pos, euler, speed, sensitivity) {
         this.pos = pos;
         this.rotation = Quaternion.buildQuaternionEuler(euler);
@@ -13,15 +23,24 @@ export class Camera {
         this.sensitivity = sensitivity;
     }
 
-    getFrustumCenter(customZFar = -1) {
+    /**
+     * @param {number} zNear
+     * @param {number} zFar
+     * @param {number} [customZFar] overrides zFar when not -1
+     */
+    getFrustumCenter(zNear, zFar, customZFar = -1) {
         let forward = this.rotation.rotateVector(Vector3.forward);
 
-        let near = Vector3.add(this.pos, Vector3.mul(forward, znear));
-        if (customZFar == -1) customZFar = zfar;
+        let near = Vector3.add(this.pos, Vector3.mul(forward, zNear));
+        if (customZFar == -1) customZFar = zFar;
         let far = Vector3.add(this.pos, Vector3.mul(forward, customZFar));
         return Vector3.div(Vector3.add(near, far), 2);
     }
 
+    /**
+     * @param {number} mouseMovementX
+     * @param {number} mouseMovementY
+     */
     updateRotation(mouseMovementX, mouseMovementY) {
         let q = Quaternion.buildQuaternionAxisAngle(Vector3.up, -mouseMovementX * this.sensitivity);
 
@@ -31,6 +50,10 @@ export class Camera {
         this.rotation = Quaternion.multiply(q, this.rotation);
     }
 
+    /**
+     * @param {number} dt
+     * @param {Record<string, boolean>} keyStates
+     */
     updateMovement(dt, keyStates) {
         let forward = this.rotation.rotateVector(Vector3.forward);
         let right = this.rotation.rotateVector(Vector3.right);
@@ -64,6 +87,14 @@ export class Camera {
 }
 
 export class GameObject {
+    /**
+     * @param {Vector3} pos
+     * @param {Vector3} eulerAngles
+     * @param {Vector3} scale
+     * @param {Color} color
+     * @param {Mesh} mesh
+     * @param {Texture | null} [texture]
+     */
     constructor(pos, eulerAngles, scale, color, mesh, texture = null) {
         this.pos = pos;
         this.scale = scale;
@@ -73,12 +104,19 @@ export class GameObject {
         this.texture = texture;
     }
 
+    /**
+     * @param {number} eulerX
+     * @param {number} eulerY
+     * @param {number} eulerZ
+     */
     rotate(eulerX, eulerY, eulerZ) {
         let q = Quaternion.buildQuaternionEuler(new Vector3(eulerX, eulerY, eulerZ));
         this.rotation = Quaternion.multiply(q, this.rotation);
     }
 
+    /** @returns {Triangle[]} */
     getTransformedTriangles() {
+        /** @type {Triangle[]} */
         let transformedTris = [];
         for (let tri of this.mesh.tris) {
             let transformedTri = tri.clone();
@@ -94,11 +132,19 @@ export class GameObject {
 }
 
 export class DirectionalLight {
+    /**
+     * @param {Vector3} dir
+     * @param {number} intensity
+     */
     constructor(dir, intensity) {
         this.dir = dir.normalize();
         this.intensity = intensity;
+        this.viewMatrix = new Mat4x4();
+        this.projectionMatrix = new Mat4x4();
+        /** @type {number[][]} */
         this.shadowMap = [];
         for (let i = 0; i < shadowMapSize; i++) {
+            /** @type {number[]} */
             let row = [];
             for (let j = 0; j < shadowMapSize; j++) {
                 row.push(Infinity);
@@ -111,13 +157,14 @@ export class DirectionalLight {
         let up = Math.abs(Vector3.dot(this.dir, Vector3.up)) < 0.99 ? Vector3.up : Vector3.forward;
         let right = Vector3.cross(up, this.dir).normalize();
         up = Vector3.cross(this.dir, right).normalize();
-        //let frustumCenter = camera.getFrustumCenter(shadowMapDistance);
+        //let frustumCenter = camera.getFrustumCenter(znear, zfar, shadowMapDistance);
         let frustumCenter = Vector3.zero;
         let lightPos = Vector3.sub(frustumCenter, Vector3.mul(this.dir, shadowMapDistance));
         this.viewMatrix = Mat4x4.View(right, up, this.dir, lightPos);
         this.projectionMatrix = Mat4x4.Orthographic(shadowMapDistance, 0.1, shadowMapDistance);
     }
 
+    /** @param {Triangle[]} tris */
     buildShadowMap(tris) {
         for (let i = 0; i < shadowMapSize; i++) {
             for (let j = 0; j < shadowMapSize; j++) {
@@ -172,6 +219,10 @@ export class DirectionalLight {
         }
     }
 
+    /**
+     * @param {Vector3} pixelWorldPos
+     * @param {Vector3} triWorldNormal
+     */
     isInShadow(pixelWorldPos, triWorldNormal) {
         let dotProduct = Vector3.dot(triWorldNormal, this.dir);
         if (dotProduct >= 0) return false;
@@ -195,15 +246,23 @@ export class DirectionalLight {
 }
 
 export class Rasterizer {
+    /**
+     * @param {HTMLCanvasElement} canvas
+     * @param {CanvasRenderingContext2D} ctx
+     */
     constructor(canvas, ctx) {
         this.canvas = canvas;
         this.ctx = ctx;
         this.imageData = ctx.createImageData(canvas.width, canvas.height);
+        /** @type {Color[][]} */
         this.screenBuffer = [];
+        /** @type {number[][]} */
         this.depthBuffer = [];
 
         for (let i = 0; i < canvas.height; i++) {
+            /** @type {Color[]} */
             let screenRow = [];
+            /** @type {number[]} */
             let depthRow = [];
             for (let j = 0; j < canvas.width; j++) {
                 screenRow.push(new Color(255, 255, 255));
@@ -223,6 +282,13 @@ export class Rasterizer {
         }
     }
 
+    /**
+     * @param {Triangle[]} tris
+     * @param {DirectionalLight} dirLight
+     * @param {number} pointLightIntensity
+     * @param {Vector3} pointLightPos
+     * @param {boolean} useShadow
+     */
     rasterizeClipSpaceTriangles(tris, dirLight, pointLightIntensity, pointLightPos, useShadow) {
         for (let tri of tris) {
             let vertices = tri.vertices;

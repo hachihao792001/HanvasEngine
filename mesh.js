@@ -1,9 +1,17 @@
 import { MathExtend, Vector2, Vector3, Mat4x4, Quaternion, Plane } from "./math.js";
 import { Color } from "./graphics.js";
 
+/** @typedef {import("./graphics.js").Texture} Texture */
+
 export class Triangle {
+    /**
+     * @param {Vector3[]} [vertices]
+     * @param {Vector2[]} [uv]
+     * @param {Color} [color]
+     */
     constructor(vertices = [], uv = [], color = new Color(255, 255, 255)) {
         if (vertices.length == 0) {
+            /** @type {Vector3[]} */
             this.vertices = [];
             for (let i = 0; i < 3; i++) {
                 this.vertices.push(new Vector3(0, 0, 0));
@@ -15,7 +23,9 @@ export class Triangle {
         this.uv = uv;
         this.worldVertices = [this.vertices[0].clone(), this.vertices[1].clone(), this.vertices[2].clone()];
         this.color = color;
+        /** @type {Texture | null} */
         this.texture = null;
+        this.signedDoubleArea = 0;
     }
 
     clone() {
@@ -36,12 +46,14 @@ export class Triangle {
         }
     }
 
+    /** @param {Mat4x4} m */
     mulMat4x4(m) {
         for (let v of this.vertices) {
             v.mulMat4x4(m);
         }
     }
 
+    /** @param {Quaternion} q */
     rotate(q) {
         for (let i = 0; i < this.vertices.length; i++) {
             this.vertices[i] = q.rotateVector(this.vertices[i]);
@@ -79,10 +91,17 @@ export class Triangle {
         }
     }
 
+    /**
+     * @param {Plane} plane
+     * @returns {Triangle[]}
+     */
     clipAgainstPlane(plane) {
+        /** @type {Triangle[]} */
         let outTris = [];
 
+        /** @type {number[]} */
         let frontPoints = [];
+        /** @type {number[]} */
         let behindPoints = [];
 
         for (let i = 0; i < this.vertices.length; i++) {
@@ -168,16 +187,21 @@ export class Triangle {
         return outTris;
     }
 
-    boundingBox(maxWidth = canvas.width, maxHeight = canvas.height) {
+    /**
+     * @param {number} maxWidth
+     * @param {number} maxHeight
+     * @returns {[number, number, number, number]} minX, maxX, minY, maxY
+     */
+    boundingBox(maxWidth, maxHeight) {
         let minX = Math.min(this.vertices[0].x, this.vertices[1].x, this.vertices[2].x);
         let maxX = Math.max(this.vertices[0].x, this.vertices[1].x, this.vertices[2].x);
         let minY = Math.min(this.vertices[0].y, this.vertices[1].y, this.vertices[2].y);
         let maxY = Math.max(this.vertices[0].y, this.vertices[1].y, this.vertices[2].y);
 
-        minX = Math.max(0, parseInt(minX));
-        maxX = Math.min(maxWidth - 1, parseInt(maxX));
-        minY = Math.max(0, parseInt(minY));
-        maxY = Math.min(maxHeight - 1, parseInt(maxY));
+        minX = Math.max(0, Math.trunc(minX));
+        maxX = Math.min(maxWidth - 1, Math.trunc(maxX));
+        minY = Math.max(0, Math.trunc(minY));
+        maxY = Math.min(maxHeight - 1, Math.trunc(maxY));
 
         return [minX, maxX, minY, maxY];
     }
@@ -188,11 +212,16 @@ export class Triangle {
 }
 
 export class Mesh {
+    /** @param {Triangle[]} [tris] */
     constructor(tris = []) {
         this.tris = tris;
     }
 
-    setTriangles(tris, color) {
+    /**
+     * @param {Triangle[]} tris
+     * @param {Color} [color]
+     */
+    setTriangles(tris, color = new Color(255, 255, 255)) {
         this.tris = [];
         for (let tri of tris) {
             this.tris.push(
@@ -212,6 +241,7 @@ export class Cube extends Mesh {
     }
 
     static generateInitialTriangles() {
+        /** @type {Triangle[]} */
         let tris = [];
         let color = new Color(255, 255, 255);
 
@@ -321,11 +351,13 @@ export class Cube extends Mesh {
 }
 
 export class ObjMesh extends Mesh {
+    /** @param {string} objURL */
     constructor(objURL) {
         super();
         this.load(objURL);
     }
 
+    /** @param {string} url */
     async load(url) {
         const response = await fetch(url);
         const objText = await response.text();
@@ -333,9 +365,16 @@ export class ObjMesh extends Mesh {
         this.setTriangles(triangles);
     }
 
+    /**
+     * @param {string} objText
+     * @returns {Triangle[]}
+     */
     parseOBJ(objText) {
+        /** @type {Vector3[]} */
         const vertices = [];
+        /** @type {Vector2[]} */
         const uvs = [];
+        /** @type {Triangle[]} */
         const triangles = [];
         const lines = objText.split("\n");
 
@@ -351,7 +390,9 @@ export class ObjMesh extends Mesh {
             } else if (line.startsWith("f ")) {
                 const vertexInfoStrs = line.split(" ").slice(1);
 
+                /** @type {Vector3[]} */
                 let triVertices = [];
+                /** @type {Vector2[]} */
                 let triUVs = [];
                 for (let vertexInfoStr of vertexInfoStrs) {
                     const vertexInfo = vertexInfoStr.split("/");
@@ -361,7 +402,7 @@ export class ObjMesh extends Mesh {
                     triVertices.push(vertexCoord);
                     triUVs.push(vertexUV);
                 }
-                let newTri = new Triangle(triVertices, triUVs, this.color);
+                let newTri = new Triangle(triVertices, triUVs);
                 triangles.push(newTri);
             }
         }
