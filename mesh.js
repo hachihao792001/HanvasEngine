@@ -1,4 +1,4 @@
-import { MathExtend, Vector2, Vector3, Mat4x4, Quaternion, Plane } from "./math.js";
+import { MathExtend, Vector2, Vector3, Mat4x4, Quaternion, Plane, BoundingBox } from "./math.js";
 import { Color } from "./graphics.js";
 
 /** @typedef {import("./graphics.js").Texture} Texture */
@@ -190,7 +190,7 @@ export class Triangle {
     /**
      * @param {number} maxWidth
      * @param {number} maxHeight
-     * @returns {[number, number, number, number]} minX, maxX, minY, maxY
+     * @returns {BoundingBox}
      */
     boundingBox(maxWidth, maxHeight) {
         let minX = Math.min(this.vertices[0].x, this.vertices[1].x, this.vertices[2].x);
@@ -203,7 +203,7 @@ export class Triangle {
         minY = Math.max(0, Math.trunc(minY));
         maxY = Math.min(maxHeight - 1, Math.trunc(maxY));
 
-        return [minX, maxX, minY, maxY];
+        return new BoundingBox(minX, maxX, minY, maxY);
     }
 
     calculateSignedDoubleArea() {

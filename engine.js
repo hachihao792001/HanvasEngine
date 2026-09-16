@@ -190,15 +190,15 @@ export class DirectionalLight {
 
             shadowTri.calculateSignedDoubleArea();
 
-            let edgeFunctionRow01 = MathExtend.edgeFunction(shadowTri.vertices[0], shadowTri.vertices[1], new Vector3(bbox[0], bbox[2], 0));
-            let edgeFunctionRow12 = MathExtend.edgeFunction(shadowTri.vertices[1], shadowTri.vertices[2], new Vector3(bbox[0], bbox[2], 0));
-            let edgeFunctionRow20 = MathExtend.edgeFunction(shadowTri.vertices[2], shadowTri.vertices[0], new Vector3(bbox[0], bbox[2], 0));
+            let edgeFunctionRow01 = MathExtend.edgeFunction(shadowTri.vertices[0], shadowTri.vertices[1], new Vector3(bbox.minX, bbox.minY, 0));
+            let edgeFunctionRow12 = MathExtend.edgeFunction(shadowTri.vertices[1], shadowTri.vertices[2], new Vector3(bbox.minX, bbox.minY, 0));
+            let edgeFunctionRow20 = MathExtend.edgeFunction(shadowTri.vertices[2], shadowTri.vertices[0], new Vector3(bbox.minX, bbox.minY, 0));
 
-            for (let y = bbox[2]; y <= bbox[3]; y++) {
+            for (let y = bbox.minY; y <= bbox.maxY; y++) {
                 let edgeFunction01 = edgeFunctionRow01;
                 let edgeFunction12 = edgeFunctionRow12;
                 let edgeFunction20 = edgeFunctionRow20;
-                for (let x = bbox[0]; x <= bbox[1]; x++) {
+                for (let x = bbox.minX; x <= bbox.maxX; x++) {
                     if (edgeFunction01 > 0 && edgeFunction12 > 0 && edgeFunction20 > 0) {
                         const baryCoord0 = edgeFunction12 / shadowTri.signedDoubleArea;
                         const baryCoord1 = edgeFunction20 / shadowTri.signedDoubleArea;
@@ -306,9 +306,9 @@ export class Rasterizer {
             let dirLightDiffuse = (1 - (Vector3.dot(triWorldNormal, dirLight.dir) + 1) / 2) * dirLight.intensity;
             const bbox = tri.boundingBox(this.canvas.width, this.canvas.height);
 
-            let edgeFunctionRow01 = MathExtend.edgeFunction(tri.vertices[0], tri.vertices[1], new Vector3(bbox[0], bbox[2], 0));
-            let edgeFunctionRow12 = MathExtend.edgeFunction(tri.vertices[1], tri.vertices[2], new Vector3(bbox[0], bbox[2], 0));
-            let edgeFunctionRow20 = MathExtend.edgeFunction(tri.vertices[2], tri.vertices[0], new Vector3(bbox[0], bbox[2], 0));
+            let edgeFunctionRow01 = MathExtend.edgeFunction(tri.vertices[0], tri.vertices[1], new Vector3(bbox.minX, bbox.minY, 0));
+            let edgeFunctionRow12 = MathExtend.edgeFunction(tri.vertices[1], tri.vertices[2], new Vector3(bbox.minX, bbox.minY, 0));
+            let edgeFunctionRow20 = MathExtend.edgeFunction(tri.vertices[2], tri.vertices[0], new Vector3(bbox.minX, bbox.minY, 0));
 
             let perspectiveWorldVertices = [
                 Vector3.mul(tri.worldVertices[0], tri.uv[0].w),
@@ -316,11 +316,11 @@ export class Rasterizer {
                 Vector3.mul(tri.worldVertices[2], tri.uv[2].w),
             ];
 
-            for (let y = bbox[2]; y <= bbox[3]; y++) {
+            for (let y = bbox.minY; y <= bbox.maxY; y++) {
                 let edgeFunction01 = edgeFunctionRow01;
                 let edgeFunction12 = edgeFunctionRow12;
                 let edgeFunction20 = edgeFunctionRow20;
-                for (let x = bbox[0]; x <= bbox[1]; x++) {
+                for (let x = bbox.minX; x <= bbox.maxX; x++) {
                     if (edgeFunction01 > 0 && edgeFunction12 > 0 && edgeFunction20 > 0) {
                         const baryCoord0 = edgeFunction12 / tri.signedDoubleArea;
                         const baryCoord1 = edgeFunction20 / tri.signedDoubleArea;

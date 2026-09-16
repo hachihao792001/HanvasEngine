@@ -365,3 +365,64 @@ export class Plane {
         return [t, Vector3.add(A, vectorAM)];
     }
 }
+
+export class BoundingBox {
+    /**
+     * 
+     * @param {Number} minX 
+     * @param {Number} maxX 
+     * @param {Number} minY 
+     * @param {Number} maxY 
+     */
+    constructor(minX, maxX, minY, maxY) {
+        this.minX = minX;
+        this.maxX = maxX;
+        this.minY = minY;
+        this.maxY = maxY;
+    }
+
+    isValid() {
+        return this.minX <= this.maxX && this.minY <= this.maxY;
+    }
+
+    /**
+     * 
+     * @param {BoundingBox} bbox1 
+     * @param {BoundingBox} bbox2 
+     * @returns 
+     */
+    static union(bbox1, bbox2) {
+        return new BoundingBox(
+            Math.min(bbox1.minX, bbox2.minX),
+            Math.max(bbox1.maxX, bbox2.maxX),
+            Math.min(bbox1.minY, bbox2.minY),
+            Math.max(bbox1.maxY, bbox2.maxY)
+        );
+    }
+
+    /**
+     * 
+     * @param {BoundingBox} bbox1 
+     * @param {BoundingBox} bbox2 
+     * @returns 
+     */
+    static intersect(bbox1, bbox2) {
+        return new BoundingBox(
+            Math.max(bbox1.minX, bbox2.minX),
+            Math.min(bbox1.maxX, bbox2.maxX),
+            Math.max(bbox1.minY, bbox2.minY),
+            Math.min(bbox1.maxY, bbox2.maxY)
+        );
+    }
+
+    /**
+     * 
+     * @param {BoundingBox} bbox1 
+     * @param {BoundingBox} bbox2 
+     * @returns 
+     */
+    static isOverlap(bbox1, bbox2) {
+        return ((bbox1.minX < bbox2.maxX && bbox1.maxX > bbox2.minX) || (bbox2.minX < bbox1.maxX && bbox2.maxX > bbox1.minX)) &&
+            ((bbox1.minY < bbox2.maxY && bbox1.maxY > bbox2.minY) || (bbox2.minY < bbox1.maxY && bbox2.maxY > bbox1.minY));
+    }
+}
