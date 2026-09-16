@@ -8,6 +8,23 @@ export class MathExtend {
     static edgeFunction(v0, v1, p) {
         return (v0.y - v1.y) * (p.x - v0.x) + (v1.x - v0.x) * (p.y - v0.y);
     }
+
+    /**
+     *
+     * @param {Number} ax
+     * @param {Number} ay
+     * @param {Number} az
+     * @param {Number} bx
+     * @param {Number} by
+     * @param {Number} bz
+     * @returns
+     */
+    static hypotSquare(ax, ay, az, bx, by, bz) {
+        const dx = ax - bx;
+        const dy = ay - by;
+        const dz = az - bz;
+        return dx * dx + dy * dy + dz * dz;
+    }
 }
 
 export class Vector2 {
@@ -234,10 +251,10 @@ export class Mat4x4 {
     }
 
     /**
-     * 
-     * @param {Vector3} pos 
-     * @param {Quaternion} rotation 
-     * @returns 
+     *
+     * @param {Vector3} pos
+     * @param {Quaternion} rotation
+     * @returns
      */
     static ViewWithPosRot(pos, rotation) {
         let forward = rotation.rotateVector(Vector3.forward);

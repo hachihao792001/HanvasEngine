@@ -60,6 +60,7 @@ let dirLightRotateSpeed = parseFloat(lightDirRotateSpeedSlider.value);
 const pointLightIntensitySlider = /** @type {HTMLInputElement} */ (document.getElementById("pointIntensity"));
 const pointLightIntensityText = /** @type {HTMLElement} */ (document.getElementById("pointIntensityText"));
 let pointLightIntensity = parseFloat(pointLightIntensitySlider.value);
+let pointLightRange = 14;
 
 const shadowCheckbox = /** @type {HTMLInputElement} */ (document.getElementById("useShadow"));
 let useShadow = true;
@@ -81,7 +82,10 @@ let woodTower = new GameObject(
     woodTexture,
 );
 let ground = new GameObject(new Vector3(0, 0, 0), Vector3.zero, new Vector3(30, 1, 30), new Color(0, 255, 0), cubeMesh, brickTexture);
-let lightCube = new GameObject(new Vector3(0, 2, 5), Vector3.zero, new Vector3(0.1, 0.1, 0.1), new Color(255, 255, 255), cubeMesh);
+let pointLights = [
+    new GameObject(new Vector3(0, 2, 5), Vector3.zero, new Vector3(0.1, 0.1, 0.1), new Color(255, 255, 255), cubeMesh),
+    new GameObject(new Vector3(0, 2, -5), Vector3.zero, new Vector3(0.1, 0.1, 0.1), new Color(255, 255, 255), cubeMesh),
+];
 
 let lastTime = performance.now();
 let dt = 0;
@@ -90,20 +94,6 @@ function updateGameObjectTransforms() {
     camera.updateMovement(dt, keyStates);
     if (lookInput.x != 0 || lookInput.y != 0) {
         camera.updateRotation(lookInput.x * dt * lookSpeed, lookInput.y * dt * lookSpeed);
-    }
-
-    if (keyStates["i"]) {
-        lightCube.pos.z += dt * 2;
-    } else if (keyStates["k"]) {
-        lightCube.pos.z -= dt * 2;
-    } else if (keyStates["j"]) {
-        lightCube.pos.x -= dt * 2;
-    } else if (keyStates["l"]) {
-        lightCube.pos.x += dt * 2;
-    } else if (keyStates["u"]) {
-        lightCube.pos.y += dt * 2;
-    } else if (keyStates["o"]) {
-        lightCube.pos.y -= dt * 2;
     }
 
     let q = Quaternion.buildQuaternionEuler(new Vector3(0, dt * dirLightRotateSpeed, 0));
@@ -116,7 +106,9 @@ function gameObjectToWorldSpaceTriangles() {
     /** @type {Triangle[]} */
     let objectTris = [];
     objectTris.push(...ground.getTransformedTriangles());
-    objectTris.push(...lightCube.getTransformedTriangles());
+    for (let light of pointLights) {
+        objectTris.push(...light.getTransformedTriangles());
+    }
     objectTris.push(...woodTower.getTransformedTriangles());
 
     return objectTris;
@@ -152,7 +144,7 @@ function viewSpaceToClipSpace(visibleTris) {
 /** @param {Triangle[]} visibleTris */
 function rasterize(visibleTris) {
     rasterizer.clearScreen();
-    rasterizer.rasterizeClipSpaceTriangles(visibleTris, dirLight, pointLightIntensity, lightCube.pos, useShadow);
+    rasterizer.rasterizeClipSpaceTriangles(visibleTris, dirLight, pointLightIntensity, pointLights, pointLightRange, useShadow);
     rasterizer.drawCall(useASCII);
 }
 

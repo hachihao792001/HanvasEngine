@@ -1,7 +1,6 @@
 import { MathExtend, Vector2, Vector3, Mat4x4, Quaternion, Plane, BoundingBox } from "./math.js";
-import { Color } from "./graphics.js";
-
-/** @typedef {import("./graphics.js").Texture} Texture */
+import { Color, Texture } from "./graphics.js";
+import { GameObject } from "./engine.js";
 
 export class Triangle {
     /**
@@ -209,6 +208,50 @@ export class Triangle {
     calculateSignedDoubleArea() {
         this.signedDoubleArea = MathExtend.edgeFunction(this.vertices[0], this.vertices[1], this.vertices[2]);
     }
+
+    /**
+     * 
+     * @param {Number} pointLightRange 
+     * @param {GameObject[]} pointLights 
+     * @returns {Vector3[]}
+     */
+    getPointLightsThatCanAffectTri(pointLightRange, pointLights) {
+        let triWorldNormal = this.getWorldNormal();
+
+        const triWorldCenterX = (this.worldVertices[0].x + this.worldVertices[1].x + this.worldVertices[2].x) / 3;
+        const triWorldCenterY = (this.worldVertices[0].y + this.worldVertices[1].y + this.worldVertices[2].y) / 3;
+        const triWorldCenterZ = (this.worldVertices[0].z + this.worldVertices[1].z + this.worldVertices[2].z) / 3;
+
+        let triBoundingCircleRadius2 = 0;
+        for (let i = 0; i < 3; i++) {
+            const currentWorldVertex = this.worldVertices[i];
+            const currentRadius2 = MathExtend.hypotSquare(
+                currentWorldVertex.x,
+                currentWorldVertex.y,
+                currentWorldVertex.z,
+                triWorldCenterX,
+                triWorldCenterY,
+                triWorldCenterZ,
+            );
+            if (currentRadius2 > triBoundingCircleRadius2) triBoundingCircleRadius2 = currentRadius2;
+        }
+        const reach = pointLightRange + Math.sqrt(triBoundingCircleRadius2);
+
+        const triPlaneD = Vector3.dot(triWorldNormal, this.worldVertices[0]);
+
+        let activeLights = [];
+        for (let i = 0; i < pointLights.length; i++) {
+            const lightPos = pointLights[i].pos;
+
+            if (Vector3.dot(triWorldNormal, lightPos) <= triPlaneD) continue;
+
+            const lightDistance2 = MathExtend.hypotSquare(lightPos.x, lightPos.y, lightPos.z, triWorldCenterX, triWorldCenterY, triWorldCenterZ);
+            if (lightDistance2 > reach * reach) continue;
+
+            activeLights.push(lightPos);
+        }
+        return activeLights;
+    }
 }
 
 export class Mesh {
@@ -248,7 +291,7 @@ export class Quad extends Mesh {
             new Triangle(
                 [new Vector3(0.5, -0.5, 0), new Vector3(0.5, 0.5, 0), new Vector3(-0.5, 0.5, 0)],
                 [new Vector2(1, 0), new Vector2(1, 1), new Vector2(0, 1)],
-                color
+                color,
             ),
         );
 
@@ -256,7 +299,7 @@ export class Quad extends Mesh {
             new Triangle(
                 [new Vector3(0.5, -0.5, 0), new Vector3(-0.5, 0.5, 0), new Vector3(-0.5, -0.5, 0)],
                 [new Vector2(1, 0), new Vector2(0, 1), new Vector2(0, 0)],
-                color
+                color,
             ),
         );
 

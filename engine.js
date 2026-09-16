@@ -289,10 +289,14 @@ export class Rasterizer {
      * @param {Triangle[]} tris
      * @param {DirectionalLight} dirLight
      * @param {number} pointLightIntensity
-     * @param {Vector3} pointLightPos
+     * @param {GameObject[]} pointLights
+     * @param {Number} pointLightRange
      * @param {boolean} useShadow
      */
-    rasterizeClipSpaceTriangles(tris, dirLight, pointLightIntensity, pointLightPos, useShadow) {
+    rasterizeClipSpaceTriangles(tris, dirLight, pointLightIntensity, pointLights, pointLightRange, useShadow) {
+
+        const pointLightRange2 = pointLightRange * pointLightRange;
+
         for (let tri of tris) {
             let vertices = tri.vertices;
             for (let i = 0; i < vertices.length; i++) {
@@ -307,6 +311,8 @@ export class Rasterizer {
 
             let triWorldNormal = tri.getWorldNormal();
             let dirLightDiffuse = (1 - (Vector3.dot(triWorldNormal, dirLight.dir) + 1) / 2) * dirLight.intensity;
+            let activeLights = pointLightIntensity > 0 ? tri.getPointLightsThatCanAffectTri(pointLightRange, pointLights) : [];
+
             const bbox = tri.boundingBox(this.canvasWidth, this.canvasHeight);
 
             let edgeFunctionRow01 = MathExtend.edgeFunction(tri.vertices[0], tri.vertices[1], new Vector3(bbox.minX, bbox.minY, 0));
@@ -354,12 +360,23 @@ export class Rasterizer {
 
                             let pointLightDiffuse = 0;
                             if (pointLightIntensity > 0) {
-                                let pointLightVec = Vector3.sub(pixelWorldPos, pointLightPos);
-                                let distance = pointLightVec.magnitude();
-                                pointLightVec.normalize();
-                                pointLightDiffuse = 1 - (Vector3.dot(triWorldNormal, pointLightVec) + 1) / 2;
-                                let attenuation = 1 / (1 + 0.1 * distance * distance);
-                                pointLightDiffuse *= attenuation * pointLightIntensity;
+                                for (let i = 0; i < activeLights.length; i++) {
+                                    const lightPos = activeLights[i];
+                                    const pointLightVecX = pixelWorldPos.x - lightPos.x;
+                                    const pointLightVecY = pixelWorldPos.y - lightPos.y;
+                                    const pointLightVecZ = pixelWorldPos.z - lightPos.z;
+                                    const distanceFromPixelToPointLight2 =
+                                        pointLightVecX * pointLightVecX + pointLightVecY * pointLightVecY + pointLightVecZ * pointLightVecZ;
+                                    if (distanceFromPixelToPointLight2 >= pointLightRange2) continue;
+
+                                    const distance = Math.sqrt(distanceFromPixelToPointLight2);
+                                    const dot =
+                                        (triWorldNormal.x * pointLightVecX + triWorldNormal.y * pointLightVecY + triWorldNormal.z * pointLightVecZ) / distance;
+                                    const falloff = 1 - distanceFromPixelToPointLight2 / pointLightRange2;
+                                    const attenuation = (falloff * falloff) / (1 + 0.1 * distanceFromPixelToPointLight2);
+                                    pointLightDiffuse += (1 - (dot + 1) / 2) * attenuation;
+                                }
+                                pointLightDiffuse *= pointLightIntensity;
                             }
 
                             let lightIntensity = (dirLightDiffuse + pointLightDiffuse) * shadowFactor;
