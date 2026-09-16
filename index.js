@@ -13,7 +13,7 @@ const fov = 60;
 let znear = 0.01,
     zfar = 1000;
 let projectionMatrix = Mat4x4.Projection(fov, gameCanvas.height, gameCanvas.width, znear, zfar);
-let camera = new Camera(new Vector3(0, 10, -10), new Vector3(-25, 0, 0), 2, 0.2);
+let camera = new Camera(new Vector3(0, 10, -10), new Vector3(-25, 0, 0), 5, 0.2);
 let nearPlane = new Plane(Vector3.forward, new Vector3(0, 0, znear));
 /** @type {Record<string, boolean>} */
 let keyStates = {};
@@ -22,7 +22,7 @@ const asciiCheckBox = /** @type {HTMLInputElement} */ (document.getElementById("
 const asciiResRow = /** @type {HTMLElement} */ (document.getElementById("asciiResRow"));
 const canvasResRow = /** @type {HTMLElement} */ (document.getElementById("canvasResRow"));
 const renderDiv = /** @type {HTMLElement} */ (document.getElementById("render"));
-const mouseLookButton = /** @type {HTMLInputElement} */(document.getElementById("mouseLookButton"));
+const mouseLookButton = /** @type {HTMLInputElement} */ (document.getElementById("mouseLookButton"));
 
 const canvasResWidthInput = /** @type {HTMLInputElement} */ (document.getElementById("canvasResWidth"));
 const canvasResHeightInput = /** @type {HTMLInputElement} */ (document.getElementById("canvasResHeight"));
@@ -41,6 +41,12 @@ if (canvasResHeightInput instanceof HTMLInputElement) canvasResHeightInput.value
 const fpsInfo = /** @type {HTMLElement} */ (document.getElementById("fps"));
 let frames = 0,
     fpsTimeCounter = 0;
+
+const mobileControls = /** @type {HTMLElement} */ (document.getElementById("mobileControls"));
+const mobileControlsButton = /** @type {HTMLInputElement} */ (document.getElementById("mobileControlsButton"));
+
+let lookInput = { x: 0, y: 0 };
+let lookSpeed = 450;
 
 const lightDirIntensitySlider = /** @type {HTMLInputElement} */ (document.getElementById("dirIntensity"));
 const lightDirIntensityText = /** @type {HTMLElement} */ (document.getElementById("dirIntensityText"));
@@ -82,6 +88,10 @@ let dt = 0;
 
 function updateGameObjectTransforms() {
     camera.updateMovement(dt, keyStates);
+    if (lookInput.x != 0 || lookInput.y != 0) {
+        camera.updateRotation(lookInput.x * dt * lookSpeed, lookInput.y * dt * lookSpeed);
+    }
+
     if (keyStates["i"]) {
         lightCube.pos.z += dt * 2;
     } else if (keyStates["k"]) {
@@ -283,4 +293,51 @@ window.addEventListener("keydown", (e) => {
 });
 window.addEventListener("keyup", (e) => {
     keyStates[e.key] = false;
+});
+
+mobileControlsButton.addEventListener("click", () => {
+    mobileControls.style.display = mobileControls.style.display == "none" ? "" : "none";
+    mobileControlsButton.blur();
+});
+
+/** @type {NodeListOf<HTMLButtonElement>} */
+const keyButtons = mobileControls.querySelectorAll("button[data-key]");
+keyButtons.forEach((button) => {
+    const key = /** @type {string} */ (button.getAttribute("data-key"));
+    button.addEventListener("pointerdown", (/** @type {PointerEvent}*/ e) => {
+        e.preventDefault();
+        keyStates[key] = true;
+        button.setPointerCapture(e.pointerId);
+    });
+    const release = () => {
+        keyStates[key] = false;
+    };
+    button.addEventListener("pointerup", release);
+    button.addEventListener("pointercancel", release);
+});
+
+/** @type {NodeListOf<HTMLButtonElement>} */
+const lookButtons = mobileControls.querySelectorAll("button[data-look]");
+lookButtons.forEach((button) => {
+    if (!button.dataset.look) return;
+    const dir = button.dataset.look.split(",");
+    const x = parseInt(dir[0]),
+        y = parseInt(dir[1]);
+    let pressed = false;
+    button.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        if (pressed) return;
+        pressed = true;
+        lookInput.x += x;
+        lookInput.y += y;
+        button.setPointerCapture(e.pointerId);
+    });
+    const release = () => {
+        if (!pressed) return;
+        pressed = false;
+        lookInput.x -= x;
+        lookInput.y -= y;
+    };
+    button.addEventListener("pointerup", release);
+    button.addEventListener("pointercancel", release);
 });

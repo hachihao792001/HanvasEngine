@@ -2,3 +2,38 @@
     max-width: 100%;
     height: auto;
 }
+
+#mobileControls .row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+}
+
+#mobileControls > div {
+    margin-bottom: 8px;
+}
+
+#mobileControls .move-controls {
+    display: grid;
+    grid-template-columns: repeat(3, auto);
+    gap: 2px;
+}
+
+#mobileControls .look-controls {
+    display: grid;
+    grid-template-columns: repeat(3, auto);
+    gap: 2px;
+}
+
+#mobileControls button {
+    width: 40px;
+    height: 40px;
+    margin: 0px;
+    padding: 0px;
+    font-family: inherit;
+    font-size: 12px;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
