@@ -253,33 +253,18 @@ export class Rasterizer {
     constructor(canvas, ctx) {
         this.canvas = canvas;
         this.ctx = ctx;
-        this.imageData = ctx.createImageData(canvas.width, canvas.height);
-        /** @type {Color[][]} */
-        this.screenBuffer = [];
-        /** @type {number[][]} */
-        this.depthBuffer = [];
 
-        for (let i = 0; i < canvas.height; i++) {
-            /** @type {Color[]} */
-            let screenRow = [];
-            /** @type {number[]} */
-            let depthRow = [];
-            for (let j = 0; j < canvas.width; j++) {
-                screenRow.push(new Color(255, 255, 255));
-                depthRow.push(Infinity);
-            }
-            this.screenBuffer.push(screenRow);
-            this.depthBuffer.push(depthRow);
-        }
+        this.imageData = ctx.createImageData(canvas.width, canvas.height);
+        this.screenBuffer = this.imageData.data;
+        this.depthBuffer = new Float64Array(canvas.width * canvas.height);
+
+        this.screenBuffer.fill(255);
+        this.depthBuffer.fill(Infinity);
     }
 
     clearScreen() {
-        for (let i = 0; i < this.screenBuffer.length; i++) {
-            for (let j = 0; j < this.screenBuffer[i].length; j++) {
-                this.screenBuffer[i][j].updateColor(240, 240, 240);
-                this.depthBuffer[i][j] = Infinity;
-            }
-        }
+        this.screenBuffer.fill(244);
+        this.depthBuffer.fill(Infinity);
     }
 
     /**
@@ -320,6 +305,7 @@ export class Rasterizer {
                 let edgeFunction01 = edgeFunctionRow01;
                 let edgeFunction12 = edgeFunctionRow12;
                 let edgeFunction20 = edgeFunctionRow20;
+                let pixelIndex = y * this.canvas.width + bbox.minX;
                 for (let x = bbox.minX; x <= bbox.maxX; x++) {
                     if (edgeFunction01 > 0 && edgeFunction12 > 0 && edgeFunction20 > 0) {
                         const baryCoord0 = edgeFunction12 / tri.signedDoubleArea;
@@ -327,8 +313,8 @@ export class Rasterizer {
                         const baryCoord2 = edgeFunction01 / tri.signedDoubleArea;
                         const z = tri.vertices[0].z * baryCoord0 + tri.vertices[1].z * baryCoord1 + tri.vertices[2].z * baryCoord2;
 
-                        if (z < this.depthBuffer[y][x]) {
-                            this.depthBuffer[y][x] = z;
+                        if (z < this.depthBuffer[pixelIndex]) {
+                            this.depthBuffer[pixelIndex] = z;
 
                             let pixelInvZ = tri.uv[0].w * baryCoord0 + tri.uv[1].w * baryCoord1 + tri.uv[2].w * baryCoord2;
 
@@ -375,16 +361,16 @@ export class Rasterizer {
                                 texColor = new Color(tri.texture.pixels[texIndex], tri.texture.pixels[texIndex + 1], tri.texture.pixels[texIndex + 2]);
                             }
 
-                            this.screenBuffer[y][x].updateColor(
-                                Math.min(255, texColor.r * lightIntensity),
-                                Math.min(255, texColor.g * lightIntensity),
-                                Math.min(255, texColor.b * lightIntensity),
-                            );
+                            const colorIndex = pixelIndex * 4;
+                            this.screenBuffer[colorIndex] = Math.min(255, texColor.r * lightIntensity);
+                            this.screenBuffer[colorIndex + 1] = Math.min(255, texColor.g * lightIntensity);
+                            this.screenBuffer[colorIndex + 2] = Math.min(255, texColor.b * lightIntensity);
                         }
                     }
                     edgeFunction01 += tri.vertices[0].y - tri.vertices[1].y;
                     edgeFunction12 += tri.vertices[1].y - tri.vertices[2].y;
                     edgeFunction20 += tri.vertices[2].y - tri.vertices[0].y;
+                    pixelIndex++;
                 }
                 edgeFunctionRow01 += tri.vertices[1].x - tri.vertices[0].x;
                 edgeFunctionRow12 += tri.vertices[2].x - tri.vertices[1].x;
@@ -394,17 +380,6 @@ export class Rasterizer {
     }
 
     drawCall() {
-        let index = 0;
-        for (let y = 0; y < this.canvas.height; y++) {
-            for (let x = 0; x < this.canvas.width; x++) {
-                const c = this.screenBuffer[y][x];
-                this.imageData.data[index++] = c.r;
-                this.imageData.data[index++] = c.g;
-                this.imageData.data[index++] = c.b;
-                this.imageData.data[index++] = 255;
-            }
-        }
-
         this.ctx.putImageData(this.imageData, 0, 0);
     }
 }
