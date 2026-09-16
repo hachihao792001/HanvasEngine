@@ -79,10 +79,7 @@ export class Camera {
     }
 
     getViewMatrix() {
-        let forward = this.rotation.rotateVector(Vector3.forward);
-        let right = this.rotation.rotateVector(Vector3.right);
-        let up = this.rotation.rotateVector(Vector3.up);
-        return Mat4x4.View(right, up, forward, this.pos);
+        return Mat4x4.ViewWithPosRot(this.pos, this.rotation);
     }
 }
 
@@ -267,9 +264,9 @@ export class Rasterizer {
     }
 
     /**
-     * 
-     * @param {Number} canvasWidth 
-     * @param {Number} canvasHeight 
+     *
+     * @param {Number} canvasWidth
+     * @param {Number} canvasHeight
      */
     resize(canvasWidth, canvasHeight) {
         this.canvasWidth = canvasWidth;

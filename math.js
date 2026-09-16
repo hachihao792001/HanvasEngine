@@ -234,6 +234,19 @@ export class Mat4x4 {
     }
 
     /**
+     * 
+     * @param {Vector3} pos 
+     * @param {Quaternion} rotation 
+     * @returns 
+     */
+    static ViewWithPosRot(pos, rotation) {
+        let forward = rotation.rotateVector(Vector3.forward);
+        let right = rotation.rotateVector(Vector3.right);
+        let up = rotation.rotateVector(Vector3.up);
+        return Mat4x4.View(right, up, forward, pos);
+    }
+
+    /**
      * @param {number} x
      * @param {number} y
      * @param {number} z
@@ -368,11 +381,11 @@ export class Plane {
 
 export class BoundingBox {
     /**
-     * 
-     * @param {Number} minX 
-     * @param {Number} maxX 
-     * @param {Number} minY 
-     * @param {Number} maxY 
+     *
+     * @param {Number} minX
+     * @param {Number} maxX
+     * @param {Number} minY
+     * @param {Number} maxY
      */
     constructor(minX, maxX, minY, maxY) {
         this.minX = minX;
@@ -386,43 +399,45 @@ export class BoundingBox {
     }
 
     /**
-     * 
-     * @param {BoundingBox} bbox1 
-     * @param {BoundingBox} bbox2 
-     * @returns 
+     *
+     * @param {BoundingBox} bbox1
+     * @param {BoundingBox} bbox2
+     * @returns
      */
     static union(bbox1, bbox2) {
         return new BoundingBox(
             Math.min(bbox1.minX, bbox2.minX),
             Math.max(bbox1.maxX, bbox2.maxX),
             Math.min(bbox1.minY, bbox2.minY),
-            Math.max(bbox1.maxY, bbox2.maxY)
+            Math.max(bbox1.maxY, bbox2.maxY),
         );
     }
 
     /**
-     * 
-     * @param {BoundingBox} bbox1 
-     * @param {BoundingBox} bbox2 
-     * @returns 
+     *
+     * @param {BoundingBox} bbox1
+     * @param {BoundingBox} bbox2
+     * @returns
      */
     static intersect(bbox1, bbox2) {
         return new BoundingBox(
             Math.max(bbox1.minX, bbox2.minX),
             Math.min(bbox1.maxX, bbox2.maxX),
             Math.max(bbox1.minY, bbox2.minY),
-            Math.min(bbox1.maxY, bbox2.maxY)
+            Math.min(bbox1.maxY, bbox2.maxY),
         );
     }
 
     /**
-     * 
-     * @param {BoundingBox} bbox1 
-     * @param {BoundingBox} bbox2 
-     * @returns 
+     *
+     * @param {BoundingBox} bbox1
+     * @param {BoundingBox} bbox2
+     * @returns
      */
     static isOverlap(bbox1, bbox2) {
-        return ((bbox1.minX < bbox2.maxX && bbox1.maxX > bbox2.minX) || (bbox2.minX < bbox1.maxX && bbox2.maxX > bbox1.minX)) &&
-            ((bbox1.minY < bbox2.maxY && bbox1.maxY > bbox2.minY) || (bbox2.minY < bbox1.maxY && bbox2.maxY > bbox1.minY));
+        return (
+            ((bbox1.minX < bbox2.maxX && bbox1.maxX > bbox2.minX) || (bbox2.minX < bbox1.maxX && bbox2.maxX > bbox1.minX)) &&
+            ((bbox1.minY < bbox2.maxY && bbox1.maxY > bbox2.minY) || (bbox2.minY < bbox1.maxY && bbox2.maxY > bbox1.minY))
+        );
     }
 }

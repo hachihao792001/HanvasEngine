@@ -33,7 +33,7 @@ export class Texture {
         this.pixels = null;
         this.width = 0;
         this.height = 0;
-        this.load(url);
+        if (url) this.load(url);
     }
 
     /** @param {string} url */

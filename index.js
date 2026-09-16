@@ -35,8 +35,8 @@ let asciiHeight = 195;
 let canvasRenderWidth = 400;
 let canvasRenderHeight = 300;
 
-if (canvasResWidthInput instanceof HTMLInputElement) canvasResWidthInput.value = canvasRenderWidth.toString();
-if (canvasResHeightInput instanceof HTMLInputElement) canvasResHeightInput.value = canvasRenderHeight.toString();
+canvasResWidthInput.value = canvasRenderWidth.toString();
+canvasResHeightInput.value = canvasRenderHeight.toString();
 
 const fpsInfo = /** @type {HTMLElement} */ (document.getElementById("fps"));
 let frames = 0,

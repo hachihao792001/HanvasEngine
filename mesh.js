@@ -235,6 +235,35 @@ export class Mesh {
     }
 }
 
+export class Quad extends Mesh {
+    constructor() {
+        super(Quad.generateInitialTriangles());
+    }
+
+    static generateInitialTriangles() {
+        let tris = [];
+        let color = new Color(255, 255, 255);
+
+        tris.push(
+            new Triangle(
+                [new Vector3(0.5, -0.5, 0), new Vector3(0.5, 0.5, 0), new Vector3(-0.5, 0.5, 0)],
+                [new Vector2(1, 0), new Vector2(1, 1), new Vector2(0, 1)],
+                color
+            ),
+        );
+
+        tris.push(
+            new Triangle(
+                [new Vector3(0.5, -0.5, 0), new Vector3(-0.5, 0.5, 0), new Vector3(-0.5, -0.5, 0)],
+                [new Vector2(1, 0), new Vector2(0, 1), new Vector2(0, 0)],
+                color
+            ),
+        );
+
+        return tris;
+    }
+}
+
 export class Cube extends Mesh {
     constructor() {
         super(Cube.generateInitialTriangles());
