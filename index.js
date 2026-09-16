@@ -5,17 +5,38 @@ import { Camera, GameObject, DirectionalLight, Rasterizer } from "./engine.js";
 
 /** @typedef {import("./mesh.js").Triangle} Triangle */
 
-const canvas = /** @type {HTMLCanvasElement} */ (document.getElementById("gameCanvas"));
-const ctx = /** @type {CanvasRenderingContext2D} */ (canvas.getContext("2d"));
-const rasterizer = new Rasterizer(canvas, ctx);
+const gameCanvas = /** @type {HTMLCanvasElement} */ (document.getElementById("gameCanvas"));
+const ctx = /** @type {CanvasRenderingContext2D} */ (gameCanvas.getContext("2d"));
+const asciiParagraph = /** @type {HTMLParagraphElement} */ (document.getElementById("asciiParagraph"));
+const rasterizer = new Rasterizer(gameCanvas.width, gameCanvas.height, ctx, asciiParagraph);
 const fov = 60;
 let znear = 0.01,
     zfar = 1000;
-let projectionMatrix = Mat4x4.Projection(fov, canvas.height, canvas.width, znear, zfar);
+let projectionMatrix = Mat4x4.Projection(fov, gameCanvas.height, gameCanvas.width, znear, zfar);
 let camera = new Camera(new Vector3(0, 10, -10), new Vector3(-25, 0, 0), 2, 0.2);
 let nearPlane = new Plane(Vector3.forward, new Vector3(0, 0, znear));
 /** @type {Record<string, boolean>} */
 let keyStates = {};
+
+const asciiCheckBox = /** @type {HTMLInputElement} */ (document.getElementById("useASCII"));
+const asciiResRow = /** @type {HTMLElement} */ (document.getElementById("asciiResRow"));
+const canvasResRow = /** @type {HTMLElement} */ (document.getElementById("canvasResRow"));
+const renderDiv = /** @type {HTMLElement} */ (document.getElementById("render"));
+const mouseLookButton = /** @type {HTMLInputElement} */(document.getElementById("mouseLookButton"));
+
+const canvasResWidthInput = /** @type {HTMLInputElement} */ (document.getElementById("canvasResWidth"));
+const canvasResHeightInput = /** @type {HTMLInputElement} */ (document.getElementById("canvasResHeight"));
+const asciiResWidthInput = /** @type {HTMLInputElement} */ (document.getElementById("asciiResWidth"));
+const asciiResHeightInput = /** @type {HTMLInputElement} */ (document.getElementById("asciiResHeight"));
+
+let useASCII = false;
+let asciiWidth = 260;
+let asciiHeight = 195;
+let canvasRenderWidth = 400;
+let canvasRenderHeight = 300;
+
+if (canvasResWidthInput instanceof HTMLInputElement) canvasResWidthInput.value = canvasRenderWidth.toString();
+if (canvasResHeightInput instanceof HTMLInputElement) canvasResHeightInput.value = canvasRenderHeight.toString();
 
 const fpsInfo = /** @type {HTMLElement} */ (document.getElementById("fps"));
 let frames = 0,
@@ -122,7 +143,7 @@ function viewSpaceToClipSpace(visibleTris) {
 function rasterize(visibleTris) {
     rasterizer.clearScreen();
     rasterizer.rasterizeClipSpaceTriangles(visibleTris, dirLight, pointLightIntensity, lightCube.pos, useShadow);
-    rasterizer.drawCall();
+    rasterizer.drawCall(useASCII);
 }
 
 /** @param {number} [time] */
@@ -174,16 +195,87 @@ shadowCheckbox.addEventListener("change", () => {
     useShadow = shadowCheckbox.checked;
 });
 
-canvas.addEventListener("click", async () => {
-    await canvas.requestPointerLock({
-        unadjustedMovement: true,
-    });
+/**
+ *
+ * @param {HTMLInputElement} input
+ * @param {Number} min
+ * @param {Number} max
+ * @param {Number} current
+ * @returns
+ */
+function readResolution(input, min, max, current) {
+    let value = parseInt(input.value);
+    if (isNaN(value)) return current;
+    return Math.max(min, Math.min(max, value));
+}
+
+function applyRenderResolution() {
+    gameCanvas.width = useASCII ? asciiWidth : canvasRenderWidth;
+    gameCanvas.height = useASCII ? asciiHeight : canvasRenderHeight;
+
+    projectionMatrix = Mat4x4.Projection(fov, gameCanvas.height, gameCanvas.width, znear, zfar);
+    rasterizer.resize(gameCanvas.width, gameCanvas.height);
+}
+
+function applyCanvasResolution() {
+    canvasRenderWidth = readResolution(canvasResWidthInput, 16, 1920, canvasRenderWidth);
+    canvasRenderHeight = readResolution(canvasResHeightInput, 16, 1440, canvasRenderHeight);
+    canvasResWidthInput.value = canvasRenderWidth.toString();
+    canvasResHeightInput.value = canvasRenderHeight.toString();
+    if (!useASCII) applyRenderResolution();
+}
+canvasResWidthInput.addEventListener("change", applyCanvasResolution);
+canvasResHeightInput.addEventListener("change", applyCanvasResolution);
+
+function applyAsciiResolution() {
+    asciiWidth = readResolution(asciiResWidthInput, 8, 500, asciiWidth);
+    asciiHeight = readResolution(asciiResHeightInput, 8, 400, asciiHeight);
+    asciiResWidthInput.value = asciiWidth.toString();
+    asciiResHeightInput.value = asciiHeight.toString();
+    if (useASCII) applyRenderResolution();
+}
+asciiResWidthInput.addEventListener("change", applyAsciiResolution);
+asciiResHeightInput.addEventListener("change", applyAsciiResolution);
+
+async function requestMouseLook() {
+    try {
+        await renderDiv.requestPointerLock({
+            unadjustedMovement: true,
+        });
+    } catch (e) {
+        // mobile
+    }
+}
+
+mouseLookButton.addEventListener("click", requestMouseLook);
+
+gameCanvas.addEventListener("mousedown", () => {
+    if (document.pointerLockElement !== renderDiv) requestMouseLook();
 });
 
-canvas.addEventListener("mousemove", (e) => {
-    if (document.pointerLockElement === canvas) {
+document.addEventListener("contextmenu", (e) => {
+    if (document.pointerLockElement === renderDiv) e.preventDefault();
+});
+
+document.addEventListener("mousemove", (e) => {
+    if (document.pointerLockElement === renderDiv) {
         camera.updateRotation(e.movementX, e.movementY);
     }
+});
+
+document.addEventListener("pointerlockchange", () => {
+    mouseLookButton.textContent = document.pointerLockElement === renderDiv ? "Mouse look on - Esc to release" : "Press here to look around (ASCII)";
+});
+
+asciiCheckBox.addEventListener("change", () => {
+    useASCII = asciiCheckBox.checked;
+    applyRenderResolution();
+    asciiParagraph.style.display = useASCII ? "" : "none";
+    gameCanvas.style.display = useASCII ? "none" : "";
+    mouseLookButton.style.display = useASCII ? "" : "none";
+    asciiResRow.style.display = useASCII ? "" : "none";
+    canvasResRow.style.display = useASCII ? "none" : "";
+    if (document.pointerLockElement != null) document.exitPointerLock();
 });
 
 window.addEventListener("keydown", (e) => {

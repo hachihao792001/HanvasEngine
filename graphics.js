@@ -20,6 +20,10 @@ export class Color {
         this.g = g;
         this.b = b;
     }
+
+    grayScale01() {
+        return (this.r + this.g + this.b) / 3.0 / 255.0;
+    }
 }
 
 export class Texture {

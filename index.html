@@ -9,8 +9,32 @@
 
 <body style="text-align: center; background: #f0f0f0">
 	<h1>3D Engine</h1>
-	<canvas id="gameCanvas" width="400" height="300" style="border: 2px solid #aaa; background: #fff"></canvas>
+	<div id="render">
+        <canvas id="gameCanvas" width="400" height="300" style="border: 2px solid #aaa; background: #fff"></canvas>
+        <p id="asciiParagraph"
+            style="display:none; font-size: 2px; font-family: 'Courier New', Courier, monospace;letter-spacing: 1px; line-height: 2px; white-space: pre;">
+        </p>
+    </div>
+    <div>
+        <button id="mouseLookButton" style="display:none">Press here to look around (ASCII)</button>
+    </div>
 	<h2 id="fps">FPS: 0</h2>
+    <div>
+        ASCII:
+        <input type="checkbox" id="useASCII" />
+    </div>
+    <div id="canvasResRow">
+        Canvas resolution:
+        <input id="canvasResWidth" value="400" size="4" />
+        x
+        <input id="canvasResHeight" value="300" size="4" />
+    </div>
+    <div id="asciiResRow" style="display: none">
+        ASCII resolution:
+        <input id="asciiResWidth" value="260" size="4" />
+        x
+        <input id="asciiResHeight" value="195" size="4" />
+    </div>
 	<div>
 		Directional light intensity:
 		<input type="range" id="dirIntensity" min="0" max="5" step="0.1" value="1" />

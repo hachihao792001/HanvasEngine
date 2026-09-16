@@ -247,16 +247,37 @@ export class DirectionalLight {
 
 export class Rasterizer {
     /**
-     * @param {HTMLCanvasElement} canvas
+     * @param {Number} canvasWidth
+     * @param {Number} canvasHeight
      * @param {CanvasRenderingContext2D} ctx
+     * @param {HTMLParagraphElement} asciiParagraph
      */
-    constructor(canvas, ctx) {
-        this.canvas = canvas;
+    constructor(canvasWidth, canvasHeight, ctx, asciiParagraph) {
+        this.canvasWidth = canvasWidth;
+        this.canvasHeight = canvasHeight;
         this.ctx = ctx;
+        this.asciiParagraph = asciiParagraph;
 
-        this.imageData = ctx.createImageData(canvas.width, canvas.height);
+        this.imageData = this.ctx.createImageData(this.canvasWidth, this.canvasHeight);
         this.screenBuffer = this.imageData.data;
-        this.depthBuffer = new Float64Array(canvas.width * canvas.height);
+        this.depthBuffer = new Float64Array(this.canvasWidth * this.canvasHeight);
+
+        this.screenBuffer.fill(255);
+        this.depthBuffer.fill(Infinity);
+    }
+
+    /**
+     * 
+     * @param {Number} canvasWidth 
+     * @param {Number} canvasHeight 
+     */
+    resize(canvasWidth, canvasHeight) {
+        this.canvasWidth = canvasWidth;
+        this.canvasHeight = canvasHeight;
+
+        this.imageData = this.ctx.createImageData(this.canvasWidth, this.canvasHeight);
+        this.screenBuffer = this.imageData.data;
+        this.depthBuffer = new Float64Array(this.canvasWidth * this.canvasHeight);
 
         this.screenBuffer.fill(255);
         this.depthBuffer.fill(Infinity);
@@ -279,8 +300,8 @@ export class Rasterizer {
             let vertices = tri.vertices;
             for (let i = 0; i < vertices.length; i++) {
                 vertices[i] = new Vector3(
-                    vertices[i].x * (this.canvas.width / 2) + this.canvas.width / 2,
-                    -vertices[i].y * (this.canvas.height / 2) + this.canvas.height / 2,
+                    vertices[i].x * (this.canvasWidth / 2) + this.canvasWidth / 2,
+                    -vertices[i].y * (this.canvasHeight / 2) + this.canvasHeight / 2,
                     vertices[i].z,
                 );
             }
@@ -289,7 +310,7 @@ export class Rasterizer {
 
             let triWorldNormal = tri.getWorldNormal();
             let dirLightDiffuse = (1 - (Vector3.dot(triWorldNormal, dirLight.dir) + 1) / 2) * dirLight.intensity;
-            const bbox = tri.boundingBox(this.canvas.width, this.canvas.height);
+            const bbox = tri.boundingBox(this.canvasWidth, this.canvasHeight);
 
             let edgeFunctionRow01 = MathExtend.edgeFunction(tri.vertices[0], tri.vertices[1], new Vector3(bbox.minX, bbox.minY, 0));
             let edgeFunctionRow12 = MathExtend.edgeFunction(tri.vertices[1], tri.vertices[2], new Vector3(bbox.minX, bbox.minY, 0));
@@ -305,7 +326,7 @@ export class Rasterizer {
                 let edgeFunction01 = edgeFunctionRow01;
                 let edgeFunction12 = edgeFunctionRow12;
                 let edgeFunction20 = edgeFunctionRow20;
-                let pixelIndex = y * this.canvas.width + bbox.minX;
+                let pixelIndex = y * this.canvasWidth + bbox.minX;
                 for (let x = bbox.minX; x <= bbox.maxX; x++) {
                     if (edgeFunction01 > 0 && edgeFunction12 > 0 && edgeFunction20 > 0) {
                         const baryCoord0 = edgeFunction12 / tri.signedDoubleArea;
@@ -379,7 +400,24 @@ export class Rasterizer {
         }
     }
 
-    drawCall() {
-        this.ctx.putImageData(this.imageData, 0, 0);
+    drawCall(useASCII = false) {
+        if (!useASCII) {
+            this.ctx.putImageData(this.imageData, 0, 0);
+        } else {
+            let renderString = "";
+            let grayScaleASCII = "$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\\|()1{}[]?-_+~<>i!lI;:,\"^`'. ";
+            for (let y = 0; y < this.canvasHeight; y++) {
+                for (let x = 0; x < this.canvasWidth; x++) {
+                    let index = (y * this.canvasWidth + x) * 4;
+                    let color = new Color(this.imageData.data[index], this.imageData.data[index + 1], this.imageData.data[index + 2]);
+                    let grayScale01 = color.grayScale01();
+                    let pixelLetter = grayScaleASCII[Math.floor((1 - grayScale01) * (grayScaleASCII.length - 1))];
+                    renderString += pixelLetter;
+                }
+                renderString += "\n";
+            }
+
+            if (this.asciiParagraph != null && this.asciiParagraph.innerText != renderString) this.asciiParagraph.innerText = renderString;
+        }
     }
 }
