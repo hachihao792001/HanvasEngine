@@ -92,6 +92,20 @@ export class Triangle {
 
     /**
      * @param {Plane} plane
+     * @returns {boolean}
+     */
+    isIntersectingPlane(plane) {
+        for (let i = 0; i < this.vertices.length; i++) {
+            let next = (i + 1) % this.vertices.length;
+            let t = plane.intersectWithLine(this.vertices[i], this.vertices[next])[0];
+            if (t >= 0 && t <= 1) return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * @param {Plane} plane
      * @returns {Triangle[]}
      */
     clipAgainstPlane(plane) {

@@ -1,9 +1,7 @@
 import { Color } from "./graphics.js";
 import { Vector2, Quaternion, Vector3, Mat4x4, MathExtend } from "./math.js";
-
-/** @typedef {import("./mesh.js").Mesh} Mesh */
-/** @typedef {import("./mesh.js").Triangle} Triangle */
-/** @typedef {import("./graphics.js").Texture} Texture */
+import { Mesh, Triangle } from "./mesh.js";
+import { Texture } from "./graphics.js";
 
 let shadowMapSize = 512;
 let shadowBias = 0.01;
@@ -84,6 +82,8 @@ export class Camera {
 }
 
 export class GameObject {
+    static incrementingID = 0;
+
     /**
      * @param {Vector3} pos
      * @param {Vector3} eulerAngles
@@ -93,6 +93,7 @@ export class GameObject {
      * @param {Texture | null} [texture]
      */
     constructor(pos, eulerAngles, scale, color, mesh, texture = null) {
+        this.id = GameObject.incrementingID++;
         this.pos = pos;
         this.scale = scale;
         this.rotation = Quaternion.buildQuaternionEuler(eulerAngles);

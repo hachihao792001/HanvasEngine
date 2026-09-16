@@ -1,3 +1,5 @@
+import { Triangle } from "./mesh.js";
+
 export class MathExtend {
     /**
      * @param {Vector3} v0
@@ -92,6 +94,15 @@ export class Vector3 {
     }
 
     /**
+     * 
+     * @param {Vector3} vec 
+     * @returns 
+     */
+    equal(vec) {
+        return this.x == vec.x && this.y == vec.y && this.z == vec.z;
+    }
+
+    /**
      * @param {Vector3} vec1
      * @param {Vector3} vec2
      */
@@ -172,6 +183,53 @@ export class Vector3 {
         this.y = m.m[1][0] * x + m.m[1][1] * y + m.m[1][2] * z + m.m[1][3] * w;
         this.z = m.m[2][0] * x + m.m[2][1] * y + m.m[2][2] * z + m.m[2][3] * w;
         this.w = m.m[3][0] * x + m.m[3][1] * y + m.m[3][2] * z + m.m[3][3] * w;
+    }
+
+    /**
+     * @param {Vector3} planeNormal
+     * @returns {Vector3}
+     */
+    projectVectorToPlane(planeNormal) {
+        let dot = Vector3.dot(this, planeNormal);
+        return Vector3.sub(this, Vector3.mul(planeNormal, dot));
+    }
+
+    /**
+     * @param {Vector3} vec1
+     * @param {Vector3} vec2
+     * @returns {[Vector3, number]}
+     */
+    static getAxisAndRadianBetween(vec1, vec2) {
+        let dot = Vector3.dot(vec1, vec2);
+        let almostOne = 0.9999;
+        if (dot >= almostOne) return [Vector3.up, 0];
+        if (dot <= -almostOne) return [Vector3.up, Math.PI];
+
+        let axis = Vector3.cross(vec1, vec2);
+        axis.normalize();
+
+        let angle = -Math.acos(dot);
+
+        return [axis, angle];
+    }
+
+    /**
+     * @param {Vector3} vec1
+     * @param {Vector3} vec2
+     * @param {Vector3} axis
+     * @returns {number}
+     */
+    static getRadianBetweenWithAxis(vec1, vec2, axis) {
+        let projectedV1 = vec1.projectVectorToPlane(axis);
+        let projectedV2 = vec2.projectVectorToPlane(axis);
+        projectedV1.normalize();
+        projectedV2.normalize();
+
+        let dot = Vector3.dot(projectedV1, projectedV2);
+        let angle = Math.acos(dot);
+
+        let cross = Vector3.cross(projectedV1, projectedV2);
+        return Vector3.dot(cross, axis) > 0 ? -angle : angle;
     }
 }
 Vector3.zero = new Vector3(0, 0, 0);
@@ -310,12 +368,57 @@ export class Quaternion {
     }
 
     /**
+     * @param {Quaternion} p
+     * @param {Quaternion} q
+     */
+    static dot(p, q) {
+        return p.a * q.a + p.b * q.b + p.c * q.c + p.d * q.d;
+    }
+
+    /**
+     * @param {Quaternion} from
+     * @param {Quaternion} to
+     * @param {number} t
+     */
+    static lerp(from, to, t) {
+        let toA = to.a,
+            toB = to.b,
+            toC = to.c,
+            toD = to.d;
+
+        let dot = Quaternion.dot(from, to);
+        if (dot < 0) {
+            toA = -toA;
+            toB = -toB;
+            toC = -toC;
+            toD = -toD;
+        }
+
+        return new Quaternion(
+            from.a + (toA - from.a) * t,
+            from.b + (toB - from.b) * t,
+            from.c + (toC - from.c) * t,
+            from.d + (toD - from.d) * t,
+        );
+    }
+
+    /**
      * @param {Vector3} axis
      * @param {number} angle
      */
     static buildQuaternionAxisAngle(axis, angle) {
         let radian = (angle / 180.0) * Math.PI;
         const half = radian / 2;
+        const s = -Math.sin(half);
+        return new Quaternion(Math.cos(half), axis.x * s, axis.y * s, axis.z * s);
+    }
+
+    /**
+     * @param {Vector3} axis
+     * @param {number} angle
+     */
+    static buildQuaternionAxisRadian(axis, angle) {
+        const half = angle / 2.0;
         const s = -Math.sin(half);
         return new Quaternion(Math.cos(half), axis.x * s, axis.y * s, axis.z * s);
     }
@@ -363,6 +466,34 @@ export class Quaternion {
         const res = Quaternion.multiply(Quaternion.multiply(this, qVec), this.conjugate());
         return new Vector3(res.b, res.c, res.d);
     }
+
+    /** @param {Vector3} v */
+    inverseRotateVector(v) {
+        const qVec = new Quaternion(0, v.x, v.y, v.z);
+        const res = Quaternion.multiply(Quaternion.multiply(this.conjugate(), qVec), this);
+        return new Vector3(res.b, res.c, res.d);
+    }
+
+    /**
+     * @param {Vector3} forward
+     * @param {Vector3} up
+     * @returns {Quaternion}
+     */
+    static lookRotation(forward, up) {
+        let [fixForwardAxis, fixForwardAngle] = Vector3.getAxisAndRadianBetween(Vector3.forward, forward);
+        let firstRotation = Quaternion.buildQuaternionAxisRadian(fixForwardAxis, fixForwardAngle);
+
+        let upAfterFirstRotation = firstRotation.rotateVector(Vector3.up).normalize();
+        let correctUp = up.projectVectorToPlane(forward).normalize();
+
+        if (Math.abs(Vector3.dot(upAfterFirstRotation, correctUp)) < 0.999999) {
+            let fixUpAngle = Vector3.getRadianBetweenWithAxis(upAfterFirstRotation, correctUp, forward);
+            let secondRotation = Quaternion.buildQuaternionAxisRadian(forward, fixUpAngle);
+            return Quaternion.multiply(secondRotation, firstRotation);
+        } else {
+            return firstRotation;
+        }
+    }
 }
 
 export class Plane {
@@ -393,6 +524,34 @@ export class Plane {
         let t = (this.D - An) / (Bn - An);
         let vectorAM = Vector3.mul(vectorAB, t);
         return [t, Vector3.add(A, vectorAM)];
+    }
+
+    /**
+     * @param {Vector3} p
+     * @returns {number}
+     */
+    distanceToPoint(p) {
+        return Vector3.dot(p, this.normal) - this.D;
+    }
+
+    /** @param {Triangle[]} tris */
+    isIntersectingWithTris(tris) {
+        for (let tri of tris) {
+            if (tri.isIntersectingPlane(this)) return true;
+        }
+        return false;
+    }
+
+    /**
+     * @param {Triangle[]} tris
+     * @returns {Triangle[]}
+     */
+    clipWithTris(tris) {
+        let clippedTris = [];
+        for (let tri of tris) {
+            clippedTris.push(...tri.clipAgainstPlane(this));
+        }
+        return clippedTris;
     }
 }
 
