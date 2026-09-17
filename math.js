@@ -1,5 +1,3 @@
-import { Triangle } from "./mesh.js";
-
 export class MathExtend {
     /**
      * @param {Vector3} v0
@@ -534,7 +532,7 @@ export class Plane {
         return Vector3.dot(p, this.normal) - this.D;
     }
 
-    /** @param {Triangle[]} tris */
+    /** @param {MathTriangle[]} tris */
     isIntersectingWithTris(tris) {
         for (let tri of tris) {
             if (tri.isIntersectingPlane(this)) return true;
@@ -543,8 +541,8 @@ export class Plane {
     }
 
     /**
-     * @param {Triangle[]} tris
-     * @returns {Triangle[]}
+     * @param {MathTriangle[]} tris
+     * @returns {MathTriangle[]}
      */
     clipWithTris(tris) {
         let clippedTris = [];
@@ -615,5 +613,160 @@ export class BoundingBox {
             ((bbox1.minX < bbox2.maxX && bbox1.maxX > bbox2.minX) || (bbox2.minX < bbox1.maxX && bbox2.maxX > bbox1.minX)) &&
             ((bbox1.minY < bbox2.maxY && bbox1.maxY > bbox2.minY) || (bbox2.minY < bbox1.maxY && bbox2.maxY > bbox1.minY))
         );
+    }
+}
+
+export class MathTriangle {
+    /** @param {Vector3[]} [vertices] */
+    constructor(vertices = []) {
+        if (vertices.length == 0) {
+            /** @type {Vector3[]} */
+            this.vertices = [];
+            for (let i = 0; i < 3; i++) {
+                this.vertices.push(new Vector3(0, 0, 0));
+            }
+        } else {
+            this.vertices = vertices;
+        }
+
+        this.signedDoubleArea = 0;
+    }
+
+    clone() {
+        let tri = new MathTriangle();
+        for (let i = 0; i < this.vertices.length; i++) {
+            tri.vertices[i] = this.vertices[i].clone();
+        }
+        return tri;
+    }
+
+    /** @param {Mat4x4} m */
+    mulMat4x4(m) {
+        for (let v of this.vertices) {
+            v.mulMat4x4(m);
+        }
+    }
+
+    /** @param {Quaternion} q */
+    rotate(q) {
+        for (let i = 0; i < this.vertices.length; i++) {
+            this.vertices[i] = q.rotateVector(this.vertices[i]);
+        }
+    }
+
+    getCenter() {
+        let x = (this.vertices[0].x + this.vertices[1].x + this.vertices[2].x) / 3.0;
+        let y = (this.vertices[0].y + this.vertices[1].y + this.vertices[2].y) / 3.0;
+        let z = (this.vertices[0].z + this.vertices[1].z + this.vertices[2].z) / 3.0;
+        return new Vector3(x, y, z);
+    }
+
+    getNormal() {
+        let v1 = Vector3.sub(this.vertices[0], this.vertices[1]);
+        let v2 = Vector3.sub(this.vertices[1], this.vertices[2]);
+        let normal = Vector3.cross(v1, v2);
+        normal.normalize();
+        return normal;
+    }
+
+    perspectiveDivide() {
+        for (let i = 0; i < this.vertices.length; i++) {
+            let z = this.vertices[i].w;
+            this.vertices[i] = Vector3.div(this.vertices[i], z);
+        }
+    }
+
+    /**
+     * @param {Plane} plane
+     * @returns {boolean}
+     */
+    isIntersectingPlane(plane) {
+        for (let i = 0; i < this.vertices.length; i++) {
+            let next = (i + 1) % this.vertices.length;
+            let t = plane.intersectWithLine(this.vertices[i], this.vertices[next])[0];
+            if (t >= 0 && t <= 1) return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * @param {Plane} plane
+     * @returns {MathTriangle[]}
+     */
+    clipAgainstPlane(plane) {
+        /** @type {MathTriangle[]} */
+        let outTris = [];
+
+        /** @type {number[]} */
+        let frontPoints = [];
+        /** @type {number[]} */
+        let behindPoints = [];
+
+        for (let i = 0; i < this.vertices.length; i++) {
+            if (plane.isPointInFrontOfPlane(this.vertices[i])) {
+                frontPoints.push(i);
+            } else {
+                behindPoints.push(i);
+            }
+        }
+
+        if (frontPoints.length == 3) {
+            outTris.push(this.clone());
+        } else if (frontPoints.length == 1 && behindPoints.length == 2) {
+            if (behindPoints[0] == 0 && behindPoints[1] == 2) {
+                behindPoints[0] = 2;
+                behindPoints[1] = 0;
+            }
+
+            let f = this.vertices[frontPoints[0]];
+            let b0 = this.vertices[behindPoints[0]];
+            let b1 = this.vertices[behindPoints[1]];
+
+            let [, intersection1] = plane.intersectWithLine(f, b0);
+            let [, intersection2] = plane.intersectWithLine(f, b1);
+
+            outTris.push(new MathTriangle([f, intersection1, intersection2]));
+        } else if (frontPoints.length == 2 && behindPoints.length == 1) {
+            if (frontPoints[0] == 0 && frontPoints[1] == 2) {
+                frontPoints[0] = 2;
+                frontPoints[1] = 0;
+            }
+
+            let f0 = this.vertices[frontPoints[0]];
+            let f1 = this.vertices[frontPoints[1]];
+            let b = this.vertices[behindPoints[0]];
+
+            let [, intersection1] = plane.intersectWithLine(f0, b);
+            let [, intersection2] = plane.intersectWithLine(f1, b);
+
+            outTris.push(new MathTriangle([f0, f1, intersection1]));
+            outTris.push(new MathTriangle([f1.clone(), intersection2, intersection1.clone()]));
+        }
+
+        return outTris;
+    }
+
+    /**
+     * @param {number} maxWidth
+     * @param {number} maxHeight
+     * @returns {BoundingBox}
+     */
+    boundingBox(maxWidth, maxHeight) {
+        let minX = Math.min(this.vertices[0].x, this.vertices[1].x, this.vertices[2].x);
+        let maxX = Math.max(this.vertices[0].x, this.vertices[1].x, this.vertices[2].x);
+        let minY = Math.min(this.vertices[0].y, this.vertices[1].y, this.vertices[2].y);
+        let maxY = Math.max(this.vertices[0].y, this.vertices[1].y, this.vertices[2].y);
+
+        minX = Math.max(0, Math.trunc(minX));
+        maxX = Math.min(maxWidth - 1, Math.trunc(maxX));
+        minY = Math.max(0, Math.trunc(minY));
+        maxY = Math.min(maxHeight - 1, Math.trunc(maxY));
+
+        return new BoundingBox(minX, maxX, minY, maxY);
+    }
+
+    calculateSignedDoubleArea() {
+        this.signedDoubleArea = MathExtend.edgeFunction(this.vertices[0], this.vertices[1], this.vertices[2]);
     }
 }

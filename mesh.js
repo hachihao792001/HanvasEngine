@@ -1,30 +1,21 @@
-import { MathExtend, Vector2, Vector3, Mat4x4, Quaternion, Plane, BoundingBox } from "./math.js";
+import { MathExtend, MathTriangle, Vector2, Vector3, Plane } from "./math.js";
 import { Color, Texture } from "./graphics.js";
 import { GameObject } from "./engine.js";
 
-export class Triangle {
+export class Triangle extends MathTriangle {
     /**
      * @param {Vector3[]} [vertices]
      * @param {Vector2[]} [uv]
      * @param {Color} [color]
      */
     constructor(vertices = [], uv = [], color = new Color(255, 255, 255)) {
-        if (vertices.length == 0) {
-            /** @type {Vector3[]} */
-            this.vertices = [];
-            for (let i = 0; i < 3; i++) {
-                this.vertices.push(new Vector3(0, 0, 0));
-            }
-        } else {
-            this.vertices = vertices;
-        }
+        super(vertices);
 
         this.uv = uv;
         this.worldVertices = [this.vertices[0].clone(), this.vertices[1].clone(), this.vertices[2].clone()];
         this.color = color;
         /** @type {Texture | null} */
         this.texture = null;
-        this.signedDoubleArea = 0;
     }
 
     clone() {
@@ -37,71 +28,6 @@ export class Triangle {
         tri.color = this.color;
         tri.texture = this.texture;
         return tri;
-    }
-
-    updateWorldVertices() {
-        for (let i = 0; i < this.vertices.length; i++) {
-            this.worldVertices[i] = this.vertices[i].clone();
-        }
-    }
-
-    /** @param {Mat4x4} m */
-    mulMat4x4(m) {
-        for (let v of this.vertices) {
-            v.mulMat4x4(m);
-        }
-    }
-
-    /** @param {Quaternion} q */
-    rotate(q) {
-        for (let i = 0; i < this.vertices.length; i++) {
-            this.vertices[i] = q.rotateVector(this.vertices[i]);
-        }
-    }
-
-    getCenter() {
-        let x = (this.vertices[0].x + this.vertices[1].x + this.vertices[2].x) / 3.0;
-        let y = (this.vertices[0].y + this.vertices[1].y + this.vertices[2].y) / 3.0;
-        let z = (this.vertices[0].z + this.vertices[1].z + this.vertices[2].z) / 3.0;
-        return new Vector3(x, y, z);
-    }
-
-    getNormal() {
-        let v1 = Vector3.sub(this.vertices[0], this.vertices[1]);
-        let v2 = Vector3.sub(this.vertices[1], this.vertices[2]);
-        let normal = Vector3.cross(v1, v2);
-        normal.normalize();
-        return normal;
-    }
-
-    getWorldNormal() {
-        let v1 = Vector3.sub(this.worldVertices[0], this.worldVertices[1]);
-        let v2 = Vector3.sub(this.worldVertices[1], this.worldVertices[2]);
-        let normal = Vector3.cross(v1, v2);
-        normal.normalize();
-        return normal;
-    }
-
-    perspectiveDivide() {
-        for (let i = 0; i < this.vertices.length; i++) {
-            let z = this.vertices[i].w;
-            this.vertices[i] = Vector3.div(this.vertices[i], z);
-            this.uv[i] = Vector2.div(this.uv[i], z);
-        }
-    }
-
-    /**
-     * @param {Plane} plane
-     * @returns {boolean}
-     */
-    isIntersectingPlane(plane) {
-        for (let i = 0; i < this.vertices.length; i++) {
-            let next = (i + 1) % this.vertices.length;
-            let t = plane.intersectWithLine(this.vertices[i], this.vertices[next])[0];
-            if (t >= 0 && t <= 1) return true;
-        }
-
-        return false;
     }
 
     /**
@@ -128,8 +54,6 @@ export class Triangle {
         if (frontPoints.length == 3) {
             outTris.push(this.clone());
         } else if (frontPoints.length == 1 && behindPoints.length == 2) {
-            let outTri = new Triangle();
-
             if (behindPoints[0] == 0 && behindPoints[1] == 2) {
                 behindPoints[0] = 2;
                 behindPoints[1] = 0;
@@ -142,6 +66,7 @@ export class Triangle {
             let [t1, intersection1] = plane.intersectWithLine(f, b0);
             let [t2, intersection2] = plane.intersectWithLine(f, b1);
 
+            let outTri = new Triangle();
             outTri.vertices[0] = f;
             outTri.vertices[1] = intersection1;
             outTri.vertices[2] = intersection2;
@@ -155,9 +80,6 @@ export class Triangle {
             outTri.texture = this.texture;
             outTris.push(outTri);
         } else if (frontPoints.length == 2 && behindPoints.length == 1) {
-            let outTri1 = new Triangle(),
-                outTri2 = new Triangle();
-
             if (frontPoints[0] == 0 && frontPoints[1] == 2) {
                 frontPoints[0] = 2;
                 frontPoints[1] = 0;
@@ -170,6 +92,7 @@ export class Triangle {
             let [t1, intersection1] = plane.intersectWithLine(f0, b);
             let [t2, intersection2] = plane.intersectWithLine(f1, b);
 
+            let outTri1 = new Triangle();
             outTri1.vertices[0] = f0;
             outTri1.vertices[1] = f1;
             outTri1.vertices[2] = intersection1;
@@ -183,6 +106,7 @@ export class Triangle {
             outTri1.texture = this.texture;
             outTris.push(outTri1);
 
+            let outTri2 = new Triangle();
             outTri2.vertices[0] = f1.clone();
             outTri2.vertices[1] = intersection2;
             outTri2.vertices[2] = intersection1.clone();
@@ -200,27 +124,25 @@ export class Triangle {
         return outTris;
     }
 
-    /**
-     * @param {number} maxWidth
-     * @param {number} maxHeight
-     * @returns {BoundingBox}
-     */
-    boundingBox(maxWidth, maxHeight) {
-        let minX = Math.min(this.vertices[0].x, this.vertices[1].x, this.vertices[2].x);
-        let maxX = Math.max(this.vertices[0].x, this.vertices[1].x, this.vertices[2].x);
-        let minY = Math.min(this.vertices[0].y, this.vertices[1].y, this.vertices[2].y);
-        let maxY = Math.max(this.vertices[0].y, this.vertices[1].y, this.vertices[2].y);
-
-        minX = Math.max(0, Math.trunc(minX));
-        maxX = Math.min(maxWidth - 1, Math.trunc(maxX));
-        minY = Math.max(0, Math.trunc(minY));
-        maxY = Math.min(maxHeight - 1, Math.trunc(maxY));
-
-        return new BoundingBox(minX, maxX, minY, maxY);
+    updateWorldVertices() {
+        for (let i = 0; i < this.vertices.length; i++) {
+            this.worldVertices[i] = this.vertices[i].clone();
+        }
     }
 
-    calculateSignedDoubleArea() {
-        this.signedDoubleArea = MathExtend.edgeFunction(this.vertices[0], this.vertices[1], this.vertices[2]);
+    getWorldNormal() {
+        let v1 = Vector3.sub(this.worldVertices[0], this.worldVertices[1]);
+        let v2 = Vector3.sub(this.worldVertices[1], this.worldVertices[2]);
+        let normal = Vector3.cross(v1, v2);
+        normal.normalize();
+        return normal;
+    }
+
+    perspectiveDivide() {
+        for (let i = 0; i < this.vertices.length; i++) {
+            this.uv[i] = Vector2.div(this.uv[i], this.vertices[i].w);
+        }
+        super.perspectiveDivide();
     }
 
     /**
