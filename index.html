@@ -20,6 +20,8 @@
     </div>
     <h2 id="fps">FPS: 0</h2>
     <div>
+        <button id="helpButton"
+            style="font-family: inherit;font-size: 15px;height: 30px;padding: 0 16px;margin-top: 0px">Help</button>
         <button id="mobileControlsButton"
             style="font-family: inherit;font-size: 15px;height: 30px;padding: 0 16px;margin-top: 0px">Mobile
             controls</button>
@@ -106,6 +108,23 @@
             <label class="controlLabel" for="useShadow">Shadow:</label>
             <span><input type="checkbox" id="useShadow" checked="checked" /></span>
         </div>
+    </div>
+
+    <div id="helpPopup" style="display: none">
+        <div class="helpPopupBar">
+            <button id="helpCloseButton"
+                style="font-family: inherit; font-size: 15px; height: 30px; padding: 0 16px">Close</button>
+        </div>
+        PC controls:
+        <ul>
+            <li>W, A, S, D to move</li>
+            <li>Space, shift to fly up and down</li>
+            <li>Mouse to look around</li>
+        </ul>
+        Touch controls:
+        <ul>
+            <li>Mobile controls to move and look around</li>
+        </ul>
     </div>
 
     <script src="index.js" type="module"></script>

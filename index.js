@@ -45,6 +45,10 @@ let frames = 0,
 const mobileControls = /** @type {HTMLElement} */ (document.getElementById("mobileControls"));
 const mobileControlsButton = /** @type {HTMLInputElement} */ (document.getElementById("mobileControlsButton"));
 
+const helpButton = /** @type {HTMLInputElement} */ (document.getElementById("helpButton"));
+const helpPopup = /** @type {HTMLElement} */ (document.getElementById("helpPopup"));
+const helpCloseButton = /** @type {HTMLInputElement} */ (document.getElementById("helpCloseButton"));
+
 let lookInput = { x: 0, y: 0 };
 let lookSpeed = 450;
 
@@ -306,6 +310,16 @@ window.addEventListener("keyup", (e) => {
 mobileControlsButton.addEventListener("click", () => {
     mobileControls.style.display = mobileControls.style.display == "none" ? "" : "none";
     mobileControlsButton.blur();
+});
+
+helpButton.addEventListener("click", () => {
+    helpPopup.style.display = helpPopup.style.display == "none" ? "" : "none";
+    helpButton.blur();
+});
+
+helpCloseButton.addEventListener("click", () => {
+    helpPopup.style.display = "none";
+    helpCloseButton.blur();
 });
 
 /** @type {NodeListOf<HTMLButtonElement>} */
