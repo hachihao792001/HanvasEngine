@@ -89,14 +89,72 @@ let woodTower = new GameObject(
 );
 let ground = new GameObject(new Vector3(0, 0, 0), Vector3.zero, new Vector3(30, 1, 30), new Color(0, 255, 0), cubeMesh, brickTexture);
 let pointLights = [
-    new GameObject(new Vector3(0, 2, 5), Vector3.zero, new Vector3(0.1, 0.1, 0.1), new Color(255, 255, 255), cubeMesh),
-    new GameObject(new Vector3(0, 2, -5), Vector3.zero, new Vector3(0.1, 0.1, 0.1), new Color(255, 255, 255), cubeMesh),
+    new GameObject(new Vector3(0, 2, 5), Vector3.zero, new Vector3(0.1, 0.1, 0.1), new Color(255, 255, 255), cubeMesh, null, "Point light 1"),
+    new GameObject(new Vector3(0, 2, -5), Vector3.zero, new Vector3(0.1, 0.1, 0.1), new Color(255, 255, 255), cubeMesh, null, "Point light 2"),
 ];
+
+/** @type {GameObject[]} */
+let controllableObjects = [pointLights[0], pointLights[1]];
+
+const controllingObjectText = /** @type {HTMLElement} */ (document.getElementById("controllingObject"));
+let controllingObject = 0;
+let controllingMoveSpeed = 6;
+let controllingRotateSpeed = 60;
+setControllingObject(0);
+
+/** @param {number} index */
+function setControllingObject(index) {
+    controllingObject = index % controllableObjects.length;
+    controllingObjectText.innerText = controllableObjects[controllingObject].name;
+}
 
 let lastTime = performance.now();
 let dt = 0;
 
+function updateControllingObject() {
+    let controlling = controllableObjects[controllingObject];
+
+    let posDelta = Vector3.zero;
+    if (keyStates["i"]) {
+        posDelta = Vector3.add(posDelta, Vector3.forward);
+    }
+    if (keyStates["k"]) {
+        posDelta = Vector3.add(posDelta, Vector3.back);
+    }
+    if (keyStates["j"]) {
+        posDelta = Vector3.add(posDelta, Vector3.left);
+    }
+    if (keyStates["l"]) {
+        posDelta = Vector3.add(posDelta, Vector3.right);
+    }
+    if (keyStates["u"]) {
+        posDelta = Vector3.add(posDelta, Vector3.up);
+    }
+    if (keyStates["o"]) {
+        posDelta = Vector3.add(posDelta, Vector3.down);
+    }
+    if (!posDelta.equal(Vector3.zero)) {
+        posDelta = Vector3.mul(posDelta.normalize(), dt * controllingMoveSpeed);
+        controlling.pos = Vector3.add(controlling.pos, posDelta);
+    }
+
+    let rotateEuler = Vector3.zero.clone();
+    if (keyStates["b"]) {
+        rotateEuler.x = dt * controllingRotateSpeed;
+    }
+    if (keyStates["n"]) {
+        rotateEuler.y = dt * controllingRotateSpeed;
+    }
+    if (keyStates["m"]) {
+        rotateEuler.z = dt * controllingRotateSpeed;
+    }
+    if (!rotateEuler.equal(Vector3.zero)) {
+        controlling.rotate(rotateEuler.x, rotateEuler.y, rotateEuler.z);
+    }
+}
+
 function updateGameObjectTransforms() {
+    updateControllingObject();
     camera.updateMovement(dt, keyStates);
     if (lookInput.x != 0 || lookInput.y != 0) {
         camera.updateRotation(lookInput.x * dt * lookSpeed, lookInput.y * dt * lookSpeed);
@@ -305,6 +363,11 @@ window.addEventListener("keydown", (e) => {
 });
 window.addEventListener("keyup", (e) => {
     keyStates[e.key] = false;
+});
+window.addEventListener("keypress", (e) => {
+    if (e.key == "p") {
+        setControllingObject(controllingObject + 1);
+    }
 });
 
 mobileControlsButton.addEventListener("click", () => {

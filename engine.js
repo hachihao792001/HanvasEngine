@@ -99,9 +99,11 @@ export class GameObject {
      * @param {Color} color
      * @param {Mesh} mesh
      * @param {Texture | null} [texture]
+     * @param {string} [name]
      */
-    constructor(pos, eulerAngles, scale, color, mesh, texture = null) {
+    constructor(pos, eulerAngles, scale, color, mesh, texture = null, name = "") {
         this.id = GameObject.incrementingID++;
+        this.name = name || `GameObject ${this.id}`;
         this.pos = pos;
         this.scale = scale;
         this.rotation = Quaternion.buildQuaternionEuler(eulerAngles);
