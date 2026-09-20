@@ -10,6 +10,7 @@ let shadowBias = 0.01;
 let shadowMapDistance = 20;
 
 export class Camera {
+    static maxPitch = 89.9;
     /**
      * @param {Vector3} pos
      * @param {Vector3} euler
@@ -42,12 +43,15 @@ export class Camera {
      * @param {number} mouseMovementY
      */
     updateRotation(mouseMovementX, mouseMovementY) {
-        let q = Quaternion.buildQuaternionAxisAngle(Vector3.up, -mouseMovementX * this.sensitivity);
+        let rotation = Quaternion.multiply(Quaternion.buildQuaternionAxisAngle(Vector3.up, -mouseMovementX * this.sensitivity), this.rotation);
 
-        let right = this.rotation.rotateVector(Vector3.right);
-        q = Quaternion.multiply(q, Quaternion.buildQuaternionAxisAngle(right, -mouseMovementY * this.sensitivity));
+        let pitchAngle = -mouseMovementY * this.sensitivity;
+        let forwardY = rotation.rotateVector(Vector3.forward).y;
+        let currentPitch = Math.asin(Math.max(-1, Math.min(1, forwardY))) * (180 / Math.PI);
+        pitchAngle = Math.max(-Camera.maxPitch - currentPitch, Math.min(Camera.maxPitch - currentPitch, pitchAngle));
 
-        this.rotation = Quaternion.multiply(q, this.rotation);
+        let right = rotation.rotateVector(Vector3.right);
+        this.rotation = Quaternion.multiply(Quaternion.buildQuaternionAxisAngle(right, pitchAngle), rotation);
     }
 
     /**
