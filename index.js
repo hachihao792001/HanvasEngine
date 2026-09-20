@@ -96,6 +96,13 @@ let pointLights = [
 /** @type {GameObject[]} */
 let controllableObjects = [pointLights[0], pointLights[1]];
 
+for (let light of pointLights) {
+    light.isHoldable = true;
+}
+/** @type {GameObject | null} */
+let holdingObject = null;
+let holdingDistance = 5;
+
 const controllingObjectText = /** @type {HTMLElement} */ (document.getElementById("controllingObject"));
 let controllingObject = 0;
 let controllingMoveSpeed = 6;
@@ -160,6 +167,10 @@ function updateGameObjectTransforms() {
         camera.updateRotation(lookInput.x * dt * lookSpeed, lookInput.y * dt * lookSpeed);
     }
 
+    if (holdingObject != null) {
+        holdingObject.pos = Vector3.add(camera.pos, Vector3.mul(camera.getForward(), holdingDistance));
+    }
+
     let q = Quaternion.buildQuaternionEuler(new Vector3(0, dt * dirLightRotateSpeed, 0));
     dirLightRotation = Quaternion.multiply(q, dirLightRotation);
     dirLight.dir = dirLightRotation.rotateVector(dirLightDefaultDir);
@@ -201,8 +212,7 @@ function worldSpaceToViewSpace(objectTris) {
  * @param {Triangle[]} visibleTris
  */
 function sortNearestFirst(visibleTris) {
-    visibleTris.sort((a, b) => 
-        (a.vertices[0].z + a.vertices[1].z + a.vertices[2].z) / 3 - (b.vertices[0].z + b.vertices[1].z + b.vertices[2].z) / 3);
+    visibleTris.sort((a, b) => (a.vertices[0].z + a.vertices[1].z + a.vertices[2].z) / 3 - (b.vertices[0].z + b.vertices[1].z + b.vertices[2].z) / 3);
 }
 
 /** @param {Triangle[]} visibleTris */
@@ -218,6 +228,13 @@ function rasterize(visibleTris) {
     rasterizer.clearScreen();
     rasterizer.rasterizeClipSpaceTriangles(visibleTris, dirLight, pointLightIntensity, pointLights, pointLightRange, useShadow);
     rasterizer.drawCall(useASCII);
+
+    let x = rasterizer.screenCenterX,
+        y = rasterizer.screenCenterY;
+    ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+    ctx.fillRect(x - 2, y - 2, 5, 5);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(x - 1, y - 1, 3, 3);
 }
 
 /** @param {number} [time] */
@@ -367,6 +384,17 @@ window.addEventListener("keyup", (e) => {
 window.addEventListener("keypress", (e) => {
     if (e.key == "p") {
         setControllingObject(controllingObject + 1);
+    } else if (e.key == "e") {
+        if (holdingObject != null) {
+            holdingObject = null;
+            return;
+        }
+
+        let pointingTri = rasterizer.pointingTri;
+        if (pointingTri == null || pointingTri.gameObject == null) return;
+        if (!pointingTri.gameObject.isHoldable) return;
+
+        holdingObject = pointingTri.gameObject;
     }
 });
 

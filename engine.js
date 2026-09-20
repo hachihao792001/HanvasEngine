@@ -110,6 +110,7 @@ export class GameObject {
         this.color = color;
         this.mesh = mesh;
         this.texture = texture;
+        this.isHoldable = false;
     }
 
     /**
@@ -137,6 +138,7 @@ export class GameObject {
             transformedTri.mulMat4x4(Mat4x4.Translation(this.pos.x, this.pos.y, this.pos.z));
             transformedTri.updateWorldVertices();
             transformedTri.texture = this.texture;
+            transformedTri.gameObject = this;
             transformedTris.push(transformedTri);
         }
         return transformedTris;
@@ -277,6 +279,11 @@ export class Rasterizer {
         this.screenBuffer.fill(255);
         this.depthBuffer.fill(Infinity);
 
+        this.screenCenterX = Math.floor(this.canvasWidth / 2);
+        this.screenCenterY = Math.floor(this.canvasHeight / 2);
+        /** @type {Triangle | null} */
+        this.pointingTri = null;
+
         /** @type {Vector3[]} */
         this.activeLights = new Array(maxActiveLights);
     }
@@ -296,6 +303,9 @@ export class Rasterizer {
 
         this.screenBuffer.fill(255);
         this.depthBuffer.fill(Infinity);
+
+        this.screenCenterX = Math.floor(this.canvasWidth / 2);
+        this.screenCenterY = Math.floor(this.canvasHeight / 2);
     }
 
     clearScreen() {
@@ -318,6 +328,10 @@ export class Rasterizer {
         const canvasHeight = this.canvasHeight;
         const activeLights = this.activeLights;
         const pointLightRange2 = pointLightRange * pointLightRange;
+        const screenCenterX = this.screenCenterX,
+            screenCenterY = this.screenCenterY;
+
+        this.pointingTri = null;
 
         for (let tri of tris) {
             let vertices = tri.vertices;
@@ -416,6 +430,10 @@ export class Rasterizer {
                                 (perspectiveWorld0Y * baryCoord0 + perspectiveWorld1Y * baryCoord1 + perspectiveWorld2Y * baryCoord2) / pixelInvZ;
                             const pixelWorldZ =
                                 (perspectiveWorld0Z * baryCoord0 + perspectiveWorld1Z * baryCoord1 + perspectiveWorld2Z * baryCoord2) / pixelInvZ;
+
+                            if (x == screenCenterX && y == screenCenterY) {
+                                this.pointingTri = tri;
+                            }
 
                             let shadowFactor = 1.0;
                             if (useShadow && dirLight.isInShadow(new Vector3(pixelWorldX, pixelWorldY, pixelWorldZ), triWorldNormal)) {
