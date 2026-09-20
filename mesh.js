@@ -146,12 +146,13 @@ export class Triangle extends MathTriangle {
     }
 
     /**
-     * 
-     * @param {Number} pointLightRange 
-     * @param {GameObject[]} pointLights 
-     * @returns {Vector3[]}
+     *
+     * @param {Number} pointLightRange
+     * @param {GameObject[]} pointLights
+     * @param {Vector3[]} outLights
+     * @returns {number}
      */
-    getPointLightsThatCanAffectTri(pointLightRange, pointLights) {
+    getPointLightsThatCanAffectTri(pointLightRange, pointLights, outLights) {
         let triWorldNormal = this.getWorldNormal();
 
         const triWorldCenterX = (this.worldVertices[0].x + this.worldVertices[1].x + this.worldVertices[2].x) / 3;
@@ -175,7 +176,7 @@ export class Triangle extends MathTriangle {
 
         const triPlaneD = Vector3.dot(triWorldNormal, this.worldVertices[0]);
 
-        let activeLights = [];
+        let count = 0;
         for (let i = 0; i < pointLights.length; i++) {
             const lightPos = pointLights[i].pos;
 
@@ -184,9 +185,11 @@ export class Triangle extends MathTriangle {
             const lightDistance2 = MathExtend.hypotSquare(lightPos.x, lightPos.y, lightPos.z, triWorldCenterX, triWorldCenterY, triWorldCenterZ);
             if (lightDistance2 > reach * reach) continue;
 
-            activeLights.push(lightPos);
+            outLights[count] = lightPos;
+            count++;
+            if (count == outLights.length) break;
         }
-        return activeLights;
+        return count;
     }
 }
 

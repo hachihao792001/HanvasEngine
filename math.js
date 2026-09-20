@@ -86,6 +86,8 @@ export class Vector3 {
     static down;
     /** @type {Vector3} */
     static forward;
+    /** @type {Vector3} */
+    static back;
 
     clone() {
         return new Vector3(this.x, this.y, this.z, this.w);
@@ -224,6 +226,7 @@ export class Vector3 {
         projectedV2.normalize();
 
         let dot = Vector3.dot(projectedV1, projectedV2);
+        dot = Math.min(Math.max(dot, -1), 1);
         let angle = Math.acos(dot);
 
         let cross = Vector3.cross(projectedV1, projectedV2);
@@ -237,6 +240,7 @@ Vector3.right = new Vector3(1, 0, 0);
 Vector3.up = new Vector3(0, 1, 0);
 Vector3.down = new Vector3(0, -1, 0);
 Vector3.forward = new Vector3(0, 0, 1);
+Vector3.back = new Vector3(0, 0, -1);
 
 export class Mat4x4 {
     constructor() {
@@ -312,7 +316,7 @@ export class Mat4x4 {
      * @param {Quaternion} rotation
      * @returns
      */
-    static ViewWithPosRot(pos, rotation) {
+    static ViewFromPosRot(pos, rotation) {
         let forward = rotation.rotateVector(Vector3.forward);
         let right = rotation.rotateVector(Vector3.right);
         let up = rotation.rotateVector(Vector3.up);
@@ -384,20 +388,16 @@ export class Quaternion {
             toC = to.c,
             toD = to.d;
 
-        let dot = Quaternion.dot(from, to);
-        if (dot < 0) {
+        if (Quaternion.dot(from, to) < 0) {
             toA = -toA;
             toB = -toB;
             toC = -toC;
             toD = -toD;
         }
 
-        return new Quaternion(
-            from.a + (toA - from.a) * t,
-            from.b + (toB - from.b) * t,
-            from.c + (toC - from.c) * t,
-            from.d + (toD - from.d) * t,
-        );
+        t = Math.min(Math.max(t, 0), 1);
+
+        return new Quaternion(from.a + (toA - from.a) * t, from.b + (toB - from.b) * t, from.c + (toC - from.c) * t, from.d + (toD - from.d) * t);
     }
 
     /**
@@ -409,6 +409,15 @@ export class Quaternion {
         const half = radian / 2;
         const s = -Math.sin(half);
         return new Quaternion(Math.cos(half), axis.x * s, axis.y * s, axis.z * s);
+    }
+
+    /**
+     * @param {Quaternion} a
+     * @param {Quaternion} b
+     * @param {number} margin
+     */
+    static isClose(a, b, margin) {
+        return 1 - Math.abs(Quaternion.dot(a, b)) < margin;
     }
 
     /**

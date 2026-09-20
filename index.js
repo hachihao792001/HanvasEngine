@@ -118,7 +118,7 @@ function gameObjectToWorldSpaceTriangles() {
  * @param {Triangle[]} objectTris
  * @returns {Triangle[]}
  */
-function objectSpaceToViewSpace(objectTris) {
+function worldSpaceToViewSpace(objectTris) {
     const viewMat = camera.getViewMatrix();
 
     /** @type {Triangle[]} */
@@ -131,6 +131,14 @@ function objectSpaceToViewSpace(objectTris) {
     }
 
     return visibleTris;
+}
+
+/**
+ * @param {Triangle[]} visibleTris
+ */
+function sortNearestFirst(visibleTris) {
+    visibleTris.sort((a, b) => 
+        (a.vertices[0].z + a.vertices[1].z + a.vertices[2].z) / 3 - (b.vertices[0].z + b.vertices[1].z + b.vertices[2].z) / 3);
 }
 
 /** @param {Triangle[]} visibleTris */
@@ -169,7 +177,8 @@ function update(time = performance.now()) {
         dirLight.buildShadowMap(objectTris);
     }
 
-    let visibleTris = objectSpaceToViewSpace(objectTris);
+    let visibleTris = worldSpaceToViewSpace(objectTris);
+    sortNearestFirst(visibleTris);
     viewSpaceToClipSpace(visibleTris);
     rasterize(visibleTris);
 

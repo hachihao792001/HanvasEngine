@@ -1,8 +1,10 @@
 import { Color } from "./graphics.js";
-import { Vector2, Quaternion, Vector3, Mat4x4, MathExtend } from "./math.js";
+import { Quaternion, Vector3, Mat4x4, MathExtend } from "./math.js";
 import { Mesh, Triangle } from "./mesh.js";
 import { Texture } from "./graphics.js";
 
+let maxActiveLights = 16;
+let ambientLight = 0.2;
 let shadowMapSize = 512;
 let shadowBias = 0.01;
 let shadowMapDistance = 20;
@@ -24,10 +26,10 @@ export class Camera {
     /**
      * @param {number} zNear
      * @param {number} zFar
-     * @param {number} [customZFar] overrides zFar when not -1
+     * @param {number} customZFar
      */
     getFrustumCenter(zNear, zFar, customZFar = -1) {
-        let forward = this.rotation.rotateVector(Vector3.forward);
+        let forward = this.getForward();
 
         let near = Vector3.add(this.pos, Vector3.mul(forward, zNear));
         if (customZFar == -1) customZFar = zFar;
@@ -53,7 +55,7 @@ export class Camera {
      * @param {Record<string, boolean>} keyStates
      */
     updateMovement(dt, keyStates) {
-        let forward = this.rotation.rotateVector(Vector3.forward);
+        let forward = this.getForward();
         let right = this.rotation.rotateVector(Vector3.right);
 
         if (keyStates["w"]) {
@@ -76,8 +78,14 @@ export class Camera {
         }
     }
 
+    getForward() {
+        let res = this.rotation.rotateVector(Vector3.forward);
+        res.normalize();
+        return res;
+    }
+
     getViewMatrix() {
-        return Mat4x4.ViewWithPosRot(this.pos, this.rotation);
+        return Mat4x4.ViewFromPosRot(this.pos, this.rotation);
     }
 }
 
@@ -110,6 +118,10 @@ export class GameObject {
     rotate(eulerX, eulerY, eulerZ) {
         let q = Quaternion.buildQuaternionEuler(new Vector3(eulerX, eulerY, eulerZ));
         this.rotation = Quaternion.multiply(q, this.rotation);
+    }
+
+    getForward() {
+        return this.rotation.rotateVector(Vector3.forward);
     }
 
     /** @returns {Triangle[]} */
@@ -262,6 +274,9 @@ export class Rasterizer {
 
         this.screenBuffer.fill(255);
         this.depthBuffer.fill(Infinity);
+
+        /** @type {Vector3[]} */
+        this.activeLights = new Array(maxActiveLights);
     }
 
     /**
@@ -295,122 +310,168 @@ export class Rasterizer {
      * @param {boolean} useShadow
      */
     rasterizeClipSpaceTriangles(tris, dirLight, pointLightIntensity, pointLights, pointLightRange, useShadow) {
-
+        const screenBuffer = this.screenBuffer;
+        const depthBuffer = this.depthBuffer;
+        const canvasWidth = this.canvasWidth;
+        const canvasHeight = this.canvasHeight;
+        const activeLights = this.activeLights;
         const pointLightRange2 = pointLightRange * pointLightRange;
 
         for (let tri of tris) {
             let vertices = tri.vertices;
             for (let i = 0; i < vertices.length; i++) {
                 vertices[i] = new Vector3(
-                    vertices[i].x * (this.canvasWidth / 2) + this.canvasWidth / 2,
-                    -vertices[i].y * (this.canvasHeight / 2) + this.canvasHeight / 2,
+                    vertices[i].x * (canvasWidth / 2) + canvasWidth / 2,
+                    -vertices[i].y * (canvasHeight / 2) + canvasHeight / 2,
                     vertices[i].z,
                 );
             }
 
             tri.calculateSignedDoubleArea();
+            const signedDoubleArea = tri.signedDoubleArea;
 
-            let triWorldNormal = tri.getWorldNormal();
-            let dirLightDiffuse = (1 - (Vector3.dot(triWorldNormal, dirLight.dir) + 1) / 2) * dirLight.intensity;
-            let activeLights = pointLightIntensity > 0 ? tri.getPointLightsThatCanAffectTri(pointLightRange, pointLights) : [];
+            const triWorldNormal = tri.getWorldNormal();
+            const worldNormalX = triWorldNormal.x,
+                worldNormalY = triWorldNormal.y,
+                worldNormalZ = triWorldNormal.z;
 
-            const bbox = tri.boundingBox(this.canvasWidth, this.canvasHeight);
+            const dirLightDiffuse = (1 - (Vector3.dot(triWorldNormal, dirLight.dir) + 1) / 2) * dirLight.intensity;
+            const activeLightCount = pointLightIntensity > 0 ? tri.getPointLightsThatCanAffectTri(pointLightRange, pointLights, activeLights) : 0;
+
+            const bbox = tri.boundingBox(canvasWidth, canvasHeight);
 
             let edgeFunctionRow01 = MathExtend.edgeFunction(tri.vertices[0], tri.vertices[1], new Vector3(bbox.minX, bbox.minY, 0));
             let edgeFunctionRow12 = MathExtend.edgeFunction(tri.vertices[1], tri.vertices[2], new Vector3(bbox.minX, bbox.minY, 0));
             let edgeFunctionRow20 = MathExtend.edgeFunction(tri.vertices[2], tri.vertices[0], new Vector3(bbox.minX, bbox.minY, 0));
 
-            let perspectiveWorldVertices = [
-                Vector3.mul(tri.worldVertices[0], tri.uv[0].w),
-                Vector3.mul(tri.worldVertices[1], tri.uv[1].w),
-                Vector3.mul(tri.worldVertices[2], tri.uv[2].w),
-            ];
+            // everything the per pixel loop needs, read once instead of once per pixel
+            const vertex0 = tri.vertices[0],
+                vertex1 = tri.vertices[1],
+                vertex2 = tri.vertices[2];
+            const vertex0Z = vertex0.z,
+                vertex1Z = vertex1.z,
+                vertex2Z = vertex2.z;
+
+            const edgeSlopeX01 = vertex0.y - vertex1.y;
+            const edgeSlopeX12 = vertex1.y - vertex2.y;
+            const edgeSlopeX20 = vertex2.y - vertex0.y;
+            const edgeSlopeY01 = vertex1.x - vertex0.x;
+            const edgeSlopeY12 = vertex2.x - vertex1.x;
+            const edgeSlopeY20 = vertex0.x - vertex2.x;
+
+            const uv0 = tri.uv[0],
+                uv1 = tri.uv[1],
+                uv2 = tri.uv[2];
+            const uv0U = uv0.u,
+                uv1U = uv1.u,
+                uv2U = uv2.u;
+            const uv0V = uv0.v,
+                uv1V = uv1.v,
+                uv2V = uv2.v;
+            const uv0W = uv0.w,
+                uv1W = uv1.w,
+                uv2W = uv2.w;
+
+            const world0 = tri.worldVertices[0],
+                world1 = tri.worldVertices[1],
+                world2 = tri.worldVertices[2];
+            const perspectiveWorld0X = world0.x * uv0W,
+                perspectiveWorld0Y = world0.y * uv0W,
+                perspectiveWorld0Z = world0.z * uv0W;
+            const perspectiveWorld1X = world1.x * uv1W,
+                perspectiveWorld1Y = world1.y * uv1W,
+                perspectiveWorld1Z = world1.z * uv1W;
+            const perspectiveWorld2X = world2.x * uv2W,
+                perspectiveWorld2Y = world2.y * uv2W,
+                perspectiveWorld2Z = world2.z * uv2W;
+
+            const triColor = tri.color;
+            const texture = tri.texture;
+            const texturePixels = texture ? texture.pixels : null;
+            const textureWidth = texture ? texture.width : 0,
+                textureHeight = texture ? texture.height : 0;
 
             for (let y = bbox.minY; y <= bbox.maxY; y++) {
                 let edgeFunction01 = edgeFunctionRow01;
                 let edgeFunction12 = edgeFunctionRow12;
                 let edgeFunction20 = edgeFunctionRow20;
-                let pixelIndex = y * this.canvasWidth + bbox.minX;
+                let pixelIndex = y * canvasWidth + bbox.minX;
                 for (let x = bbox.minX; x <= bbox.maxX; x++) {
                     if (edgeFunction01 > 0 && edgeFunction12 > 0 && edgeFunction20 > 0) {
-                        const baryCoord0 = edgeFunction12 / tri.signedDoubleArea;
-                        const baryCoord1 = edgeFunction20 / tri.signedDoubleArea;
-                        const baryCoord2 = edgeFunction01 / tri.signedDoubleArea;
-                        const z = tri.vertices[0].z * baryCoord0 + tri.vertices[1].z * baryCoord1 + tri.vertices[2].z * baryCoord2;
+                        const baryCoord0 = edgeFunction12 / signedDoubleArea;
+                        const baryCoord1 = edgeFunction20 / signedDoubleArea;
+                        const baryCoord2 = edgeFunction01 / signedDoubleArea;
+                        const z = vertex0Z * baryCoord0 + vertex1Z * baryCoord1 + vertex2Z * baryCoord2;
 
-                        if (z < this.depthBuffer[pixelIndex]) {
-                            this.depthBuffer[pixelIndex] = z;
+                        if (z < depthBuffer[pixelIndex]) {
+                            depthBuffer[pixelIndex] = z;
 
-                            let pixelInvZ = tri.uv[0].w * baryCoord0 + tri.uv[1].w * baryCoord1 + tri.uv[2].w * baryCoord2;
+                            const pixelInvZ = uv0W * baryCoord0 + uv1W * baryCoord1 + uv2W * baryCoord2;
 
-                            let pixelWorldPos = new Vector3(
-                                perspectiveWorldVertices[0].x * baryCoord0 +
-                                    perspectiveWorldVertices[1].x * baryCoord1 +
-                                    perspectiveWorldVertices[2].x * baryCoord2,
-                                perspectiveWorldVertices[0].y * baryCoord0 +
-                                    perspectiveWorldVertices[1].y * baryCoord1 +
-                                    perspectiveWorldVertices[2].y * baryCoord2,
-                                perspectiveWorldVertices[0].z * baryCoord0 +
-                                    perspectiveWorldVertices[1].z * baryCoord1 +
-                                    perspectiveWorldVertices[2].z * baryCoord2,
-                            );
-                            pixelWorldPos = Vector3.div(pixelWorldPos, pixelInvZ);
+                            const pixelWorldX =
+                                (perspectiveWorld0X * baryCoord0 + perspectiveWorld1X * baryCoord1 + perspectiveWorld2X * baryCoord2) / pixelInvZ;
+                            const pixelWorldY =
+                                (perspectiveWorld0Y * baryCoord0 + perspectiveWorld1Y * baryCoord1 + perspectiveWorld2Y * baryCoord2) / pixelInvZ;
+                            const pixelWorldZ =
+                                (perspectiveWorld0Z * baryCoord0 + perspectiveWorld1Z * baryCoord1 + perspectiveWorld2Z * baryCoord2) / pixelInvZ;
 
-                            let inShadow = useShadow ? dirLight.isInShadow(pixelWorldPos, triWorldNormal) : false;
-                            let shadowFactor = inShadow ? 0.5 : 1.0;
+                            let shadowFactor = 1.0;
+                            if (useShadow && dirLight.isInShadow(new Vector3(pixelWorldX, pixelWorldY, pixelWorldZ), triWorldNormal)) {
+                                shadowFactor = 0.5;
+                            }
 
-                            let pointLightDiffuse = 0;
+                            let totalPointLightDiffuse = 0;
                             if (pointLightIntensity > 0) {
-                                for (let i = 0; i < activeLights.length; i++) {
+                                for (let i = 0; i < activeLightCount; i++) {
                                     const lightPos = activeLights[i];
-                                    const pointLightVecX = pixelWorldPos.x - lightPos.x;
-                                    const pointLightVecY = pixelWorldPos.y - lightPos.y;
-                                    const pointLightVecZ = pixelWorldPos.z - lightPos.z;
+                                    const pointLightVecX = lightPos.x - pixelWorldX;
+                                    const pointLightVecY = lightPos.y - pixelWorldY;
+                                    const pointLightVecZ = lightPos.z - pixelWorldZ;
                                     const distanceFromPixelToPointLight2 =
                                         pointLightVecX * pointLightVecX + pointLightVecY * pointLightVecY + pointLightVecZ * pointLightVecZ;
                                     if (distanceFromPixelToPointLight2 >= pointLightRange2) continue;
 
                                     const distance = Math.sqrt(distanceFromPixelToPointLight2);
-                                    const dot =
-                                        (triWorldNormal.x * pointLightVecX + triWorldNormal.y * pointLightVecY + triWorldNormal.z * pointLightVecZ) / distance;
-                                    const falloff = 1 - distanceFromPixelToPointLight2 / pointLightRange2;
-                                    const attenuation = (falloff * falloff) / (1 + 0.1 * distanceFromPixelToPointLight2);
-                                    pointLightDiffuse += (1 - (dot + 1) / 2) * attenuation;
+                                    const dot = (worldNormalX * pointLightVecX + worldNormalY * pointLightVecY + worldNormalZ * pointLightVecZ) / distance;
+                                    const currentPointLightDiffuse = (1 + dot) / 2;
+                                    const pointLightDistanceRatio = distanceFromPixelToPointLight2 / pointLightRange2;
+                                    const inverseSquareDistance = 1 / (1 + 0.02 * distanceFromPixelToPointLight2);
+                                    const attenuation = (1 - pointLightDistanceRatio) * inverseSquareDistance;
+                                    totalPointLightDiffuse += currentPointLightDiffuse * attenuation;
                                 }
-                                pointLightDiffuse *= pointLightIntensity;
+                                totalPointLightDiffuse *= pointLightIntensity;
                             }
 
-                            let lightIntensity = (dirLightDiffuse + pointLightDiffuse) * shadowFactor;
+                            const lightIntensity = Math.max(ambientLight, (dirLightDiffuse + totalPointLightDiffuse) * shadowFactor);
 
-                            let texColor = tri.color;
-                            if (tri.texture && tri.texture.pixels) {
-                                let pixelUV = new Vector2(
-                                    tri.uv[0].u * baryCoord0 + tri.uv[1].u * baryCoord1 + tri.uv[2].u * baryCoord2,
-                                    tri.uv[0].v * baryCoord0 + tri.uv[1].v * baryCoord1 + tri.uv[2].v * baryCoord2,
-                                    pixelInvZ,
-                                );
-                                pixelUV = Vector2.div(pixelUV, pixelUV.w);
-
-                                const texX = Math.floor(pixelUV.u * (tri.texture.width - 1));
-                                const texY = Math.floor(pixelUV.v * (tri.texture.height - 1));
-                                const texIndex = (texY * tri.texture.width + texX) * 4;
-                                texColor = new Color(tri.texture.pixels[texIndex], tri.texture.pixels[texIndex + 1], tri.texture.pixels[texIndex + 2]);
+                            let texR = triColor.r,
+                                texG = triColor.g,
+                                texB = triColor.b;
+                            if (texturePixels) {
+                                const pixelU = (uv0U * baryCoord0 + uv1U * baryCoord1 + uv2U * baryCoord2) / pixelInvZ;
+                                const pixelV = (uv0V * baryCoord0 + uv1V * baryCoord1 + uv2V * baryCoord2) / pixelInvZ;
+                                const texX = Math.floor(pixelU * (textureWidth - 1));
+                                const texY = Math.floor(pixelV * (textureHeight - 1));
+                                const texIndex = (texY * textureWidth + texX) * 4;
+                                texR = texturePixels[texIndex];
+                                texG = texturePixels[texIndex + 1];
+                                texB = texturePixels[texIndex + 2];
                             }
 
                             const colorIndex = pixelIndex * 4;
-                            this.screenBuffer[colorIndex] = Math.min(255, texColor.r * lightIntensity);
-                            this.screenBuffer[colorIndex + 1] = Math.min(255, texColor.g * lightIntensity);
-                            this.screenBuffer[colorIndex + 2] = Math.min(255, texColor.b * lightIntensity);
+                            screenBuffer[colorIndex] = Math.min(255, texR * lightIntensity);
+                            screenBuffer[colorIndex + 1] = Math.min(255, texG * lightIntensity);
+                            screenBuffer[colorIndex + 2] = Math.min(255, texB * lightIntensity);
                         }
                     }
-                    edgeFunction01 += tri.vertices[0].y - tri.vertices[1].y;
-                    edgeFunction12 += tri.vertices[1].y - tri.vertices[2].y;
-                    edgeFunction20 += tri.vertices[2].y - tri.vertices[0].y;
+                    edgeFunction01 += edgeSlopeX01;
+                    edgeFunction12 += edgeSlopeX12;
+                    edgeFunction20 += edgeSlopeX20;
                     pixelIndex++;
                 }
-                edgeFunctionRow01 += tri.vertices[1].x - tri.vertices[0].x;
-                edgeFunctionRow12 += tri.vertices[2].x - tri.vertices[1].x;
-                edgeFunctionRow20 += tri.vertices[0].x - tri.vertices[2].x;
+                edgeFunctionRow01 += edgeSlopeY01;
+                edgeFunctionRow12 += edgeSlopeY12;
+                edgeFunctionRow20 += edgeSlopeY20;
             }
         }
     }
