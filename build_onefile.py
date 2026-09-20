@@ -5,7 +5,8 @@ Bundle index.html and everything it depends on into a single self-contained OneF
 
 What gets inlined:
   * <script src="..."> - the whole ES module graph, flattened in dependency order,
-    with `import`/`export` statements stripped so it runs as a classic script.
+    with `import`/`export` statements stripped so it runs as a classic script, and the
+    JSDoc type annotations dropped (they only exist for the type checker; --keep-jsdoc keeps them).
   * <link rel="stylesheet" href="..."> - local CSS, turned into <style>.
   * with --embed-remote: remote assets referenced by URL inside the JS
     (textures, .obj models) are downloaded and turned into data: URIs.
@@ -13,6 +14,7 @@ What gets inlined:
 Usage:
     py build_onefile.py                      # index.html -> OneFile.html
     py build_onefile.py --embed-remote       # also bake in textures/models
+    py build_onefile.py --keep-jsdoc         # leave the JSDoc comments in
     py build_onefile.py page.html out.html
 """
 
@@ -69,7 +71,116 @@ def read_text(path):
     return path.read_text(encoding="utf-8")
 
 
-def strip_module_syntax(source, module_name):
+JSDOC_MARK = "\x00"
+# A line that held nothing but JSDoc, and the leftover marks of the inline `/** @type {X} */ (v)` casts.
+JSDOC_LINE_RE = re.compile(r"""^[ \t]*%s[ \t]*\r?\n""" % JSDOC_MARK, re.MULTILINE)
+# A `/` starts a regex literal (not a comment) when the previous token cannot end an expression.
+REGEX_PRECEDER_RE = re.compile(r"""[(,=:\[!&|?{};+\-*%^~<>]$|\b(?:return|typeof|case|in|of|new|delete|void|do|else)$""")
+
+
+def mark_jsdoc(source):
+    """Replace every /** ... */ block with a marker, leaving strings, regexes and plain comments alone."""
+    out = []
+    tail = ""  # the last few characters emitted, enough to tell a regex from a division
+
+    def emit(text):
+        nonlocal tail
+        out.append(text)
+        tail = (tail + text)[-16:]
+
+    i, n = 0, len(source)
+    while i < n:
+        ch = source[i]
+
+        if ch in "'\"":
+            quote = ch
+            j = i + 1
+            while j < n:
+                if source[j] == "\\":
+                    j += 2
+                    continue
+                if source[j] == quote:
+                    j += 1
+                    break
+                j += 1
+            emit(source[i:j])
+            i = j
+            continue
+
+        if ch == "`":
+            # template literals nest `${ ... }`, which can hold more strings and templates
+            depth = 0
+            j = i + 1
+            while j < n:
+                if source[j] == "\\":
+                    j += 2
+                    continue
+                if source[j] == "$" and source.startswith("${", j):
+                    depth += 1
+                    j += 2
+                    continue
+                if depth > 0 and source[j] == "}":
+                    depth -= 1
+                elif depth == 0 and source[j] == "`":
+                    j += 1
+                    break
+                j += 1
+            emit(source[i:j])
+            i = j
+            continue
+
+        if ch == "/" and source.startswith("//", i):
+            j = source.find("\n", i)
+            j = n if j == -1 else j
+            emit(source[i:j])
+            i = j
+            continue
+
+        if ch == "/" and source.startswith("/*", i):
+            end = source.find("*/", i + 2)
+            end = n if end == -1 else end + 2
+            comment = source[i:end]
+            emit(JSDOC_MARK if comment.startswith("/**") else comment)
+            i = end
+            continue
+
+        if ch == "/":
+            # a regex literal - skip it whole, its body may contain anything
+            prefix = tail.rstrip()
+            if not prefix or REGEX_PRECEDER_RE.search(prefix):
+                j = i + 1
+                in_class = False
+                while j < n and source[j] != "\n":
+                    if source[j] == "\\":
+                        j += 2
+                        continue
+                    if source[j] == "[":
+                        in_class = True
+                    elif source[j] == "]":
+                        in_class = False
+                    elif source[j] == "/" and not in_class:
+                        j += 1
+                        break
+                    j += 1
+                emit(source[i:j])
+                i = j
+                continue
+
+        emit(ch)
+        i += 1
+
+    return "".join(out)
+
+
+def strip_jsdoc(source):
+    """Drop the JSDoc the bundle has no use for: @param/@type/@returns blocks and inline casts."""
+    body = mark_jsdoc(source)
+    body = JSDOC_LINE_RE.sub("", body)
+    body = body.replace(JSDOC_MARK + " ", "").replace(JSDOC_MARK, "")
+    return body
+
+
+def strip_module_syntax(source, module_name, keep_jsdoc=False):
     """Remove import/export syntax; return the plain-script body and the import specifiers."""
     specs = []
 
@@ -77,7 +188,8 @@ def strip_module_syntax(source, module_name):
         specs.append(match.group("spec"))
         return ""
 
-    body = IMPORT_RE.sub(take_import, source)
+    body = source if keep_jsdoc else strip_jsdoc(source)
+    body = IMPORT_RE.sub(take_import, body)
     body = EXPORT_LIST_RE.sub("", body)
     body = EXPORT_DECL_RE.sub(r"\1", body)
 
@@ -89,7 +201,7 @@ def strip_module_syntax(source, module_name):
     return body.strip("\n"), specs
 
 
-def collect_modules(entry):
+def collect_modules(entry, keep_jsdoc=False):
     """Depth-first walk of the module graph -> [(path, body)] with dependencies first."""
     ordered = []
     done = set()
@@ -106,7 +218,7 @@ def collect_modules(entry):
             raise FileNotFoundError("imported file not found: %s" % path)
 
         in_progress.add(path)
-        body, specs = strip_module_syntax(read_text(path), path.name)
+        body, specs = strip_module_syntax(read_text(path), path.name, keep_jsdoc)
         for spec in specs:
             if is_remote(spec):
                 print("  ! %s imports remote module %s; left out" % (path.name, spec), file=sys.stderr)
@@ -254,7 +366,7 @@ def embed_remote_assets(code):
     return REMOTE_ASSET_RE.sub(replace, code)
 
 
-def bundle(entry_html, output, embed_remote, indent_unit=None):
+def bundle(entry_html, output, embed_remote, indent_unit=None, keep_jsdoc=False):
     base = entry_html.parent
     html = read_text(entry_html)
     unit = indent_unit or detect_indent_unit(html)
@@ -266,7 +378,7 @@ def bundle(entry_html, output, embed_remote, indent_unit=None):
 
         entry_js = (base / src).resolve()
         print("  bundling %s" % src)
-        modules = collect_modules(entry_js)
+        modules = collect_modules(entry_js, keep_jsdoc)
         warn_on_collisions(modules)
 
         chunks = []
@@ -322,6 +434,11 @@ def main():
         help="download remote textures/models and bake them in as data: URIs",
     )
     parser.add_argument(
+        "--keep-jsdoc",
+        action="store_true",
+        help="keep the /** @param @type @returns */ blocks instead of stripping them out",
+    )
+    parser.add_argument(
         "--indent",
         default="auto",
         metavar="auto|tab|N",
@@ -350,7 +467,7 @@ def main():
         return 1
 
     print("Bundling %s -> %s" % (entry_html.name, output.name))
-    bundle(entry_html, output, args.embed_remote, indent_unit)
+    bundle(entry_html, output, args.embed_remote, indent_unit, args.keep_jsdoc)
     return 0
 
 
