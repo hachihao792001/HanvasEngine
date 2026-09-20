@@ -3,6 +3,48 @@
     height: auto;
 }
 
+.slider-value {
+    display: inline-block;
+    min-width: 3em;
+    text-align: left;
+    font-variant-numeric: tabular-nums;
+}
+
+input[type="range"] {
+    vertical-align: middle;
+}
+
+#controls {
+    display: grid;
+    grid-template-columns: max-content max-content;
+    justify-content: center;
+    justify-items: start;
+    align-items: center;
+    column-gap: 8px;
+    row-gap: 2px;
+}
+
+#controls .controlRow {
+    display: contents;
+}
+
+#controls .controlLabel {
+    justify-self: end;
+}
+
+@media (max-width: 480px) {
+    #controls {
+        grid-template-columns: max-content;
+        justify-items: center;
+        row-gap: 0;
+    }
+
+    #controls .controlLabel {
+        justify-self: center;
+        margin-top: 4px;
+    }
+}
+
 #mobileControls .row {
     display: flex;
     flex-wrap: wrap;

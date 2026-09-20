@@ -60,7 +60,9 @@ let dirLightRotateSpeed = parseFloat(lightDirRotateSpeedSlider.value);
 const pointLightIntensitySlider = /** @type {HTMLInputElement} */ (document.getElementById("pointIntensity"));
 const pointLightIntensityText = /** @type {HTMLElement} */ (document.getElementById("pointIntensityText"));
 let pointLightIntensity = parseFloat(pointLightIntensitySlider.value);
-let pointLightRange = 14;
+const pointLightRangeSlider = /** @type {HTMLInputElement} */ (document.getElementById("pointRange"));
+const pointLightRangeText = /** @type {HTMLElement} */ (document.getElementById("pointRangeText"));
+let pointLightRange = parseFloat(pointLightRangeSlider.value);
 
 const shadowCheckbox = /** @type {HTMLInputElement} */ (document.getElementById("useShadow"));
 let useShadow = true;
@@ -200,6 +202,11 @@ lightDirRotateSpeedSlider.addEventListener("input", () => {
 pointLightIntensitySlider.addEventListener("input", () => {
     pointLightIntensity = parseFloat(pointLightIntensitySlider.value);
     pointLightIntensityText.textContent = pointLightIntensity.toFixed(2);
+});
+
+pointLightRangeSlider.addEventListener("input", () => {
+    pointLightRange = parseFloat(pointLightRangeSlider.value);
+    pointLightRangeText.textContent = pointLightRange.toFixed(0);
 });
 
 shadowCheckbox.addEventListener("change", () => {

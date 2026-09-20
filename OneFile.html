@@ -9,6 +9,48 @@
             height: auto;
         }
 
+        .slider-value {
+            display: inline-block;
+            min-width: 3em;
+            text-align: left;
+            font-variant-numeric: tabular-nums;
+        }
+
+        input[type="range"] {
+            vertical-align: middle;
+        }
+
+        #controls {
+            display: grid;
+            grid-template-columns: max-content max-content;
+            justify-content: center;
+            justify-items: start;
+            align-items: center;
+            column-gap: 8px;
+            row-gap: 2px;
+        }
+
+        #controls .controlRow {
+            display: contents;
+        }
+
+        #controls .controlLabel {
+            justify-self: end;
+        }
+
+        @media (max-width: 480px) {
+            #controls {
+                grid-template-columns: max-content;
+                justify-items: center;
+                row-gap: 0;
+            }
+
+            #controls .controlLabel {
+                justify-self: center;
+                margin-top: 4px;
+            }
+        }
+
         #mobileControls .row {
             display: flex;
             flex-wrap: wrap;
@@ -68,9 +110,9 @@
                 <div>
                     <b>Move</b><br />
                     <div class="move-controls">
-                        <span></span>
+                        <button data-key=" ">Up</button>
                         <button data-key="w">W</button>
-                        <span></span>
+                        <button data-key="Shift">Down</button>
 
                         <button data-key="a">A</button>
                         <button data-key="s">S</button>
@@ -93,65 +135,68 @@
             </div>
         </div>
     </div>
-    <div>
-        ASCII:
-        <input type="checkbox" id="useASCII" />
-    </div>
-    <div id="canvasResRow">
-        Canvas resolution:
-        <input id="canvasResWidth" value="400" size="4" />
-        x
-        <input id="canvasResHeight" value="300" size="4" />
-    </div>
-    <div id="asciiResRow" style="display: none">
-        ASCII resolution:
-        <input id="asciiResWidth" value="260" size="4" />
-        x
-        <input id="asciiResHeight" value="195" size="4" />
-    </div>
-    <div>
-        Directional light intensity:
-        <input type="range" id="dirIntensity" min="0" max="5" step="0.1" value="1" />
-        <span id="dirIntensityText" class="slider-value">1.0</span>
-    </div>
-    <div>
-        Directional light rotate speed:
-        <input type="range" id="dirRotateSpeed" min="0" max="50" step="0.1" value="10" />
-        <span id="dirRotateSpeedText" class="slider-value">10</span>
-    </div>
-    <div>
-        Point light intensity:
-        <input type="range" id="pointIntensity" min="0" max="5" step="0.1" value="1" />
-        <span id="pointIntensityText" class="slider-value">1.0</span>
-    </div>
-    <div>
-        Shadow:
-        <input type="checkbox" id="useShadow" checked="checked" />
+    <div id="controls">
+        <div class="controlRow">
+            <label class="controlLabel" for="useASCII">ASCII:</label>
+            <span><input type="checkbox" id="useASCII" /></span>
+        </div>
+        <div class="controlRow" id="canvasResRow">
+            <label class="controlLabel" for="canvasResWidth">Canvas resolution:</label>
+            <span>
+                <input id="canvasResWidth" value="400" size="4" />
+                x
+                <input id="canvasResHeight" value="300" size="4" />
+            </span>
+        </div>
+        <div class="controlRow" id="asciiResRow" style="display: none">
+            <label class="controlLabel" for="asciiResWidth">ASCII resolution:</label>
+            <span>
+                <input id="asciiResWidth" value="260" size="4" />
+                x
+                <input id="asciiResHeight" value="195" size="4" />
+            </span>
+        </div>
+        <div class="controlRow">
+            <label class="controlLabel" for="dirIntensity">Directional light intensity:</label>
+            <span>
+                <input type="range" id="dirIntensity" min="0" max="5" step="0.1" value="1" />
+                <span id="dirIntensityText" class="slider-value">1.0</span>
+            </span>
+        </div>
+        <div class="controlRow">
+            <label class="controlLabel" for="dirRotateSpeed">Directional light rotate speed:</label>
+            <span>
+                <input type="range" id="dirRotateSpeed" min="0" max="50" step="0.1" value="10" />
+                <span id="dirRotateSpeedText" class="slider-value">10</span>
+            </span>
+        </div>
+        <div class="controlRow">
+            <label class="controlLabel" for="pointIntensity">Point light intensity:</label>
+            <span>
+                <input type="range" id="pointIntensity" min="0" max="5" step="0.1" value="1" />
+                <span id="pointIntensityText" class="slider-value">1.0</span>
+            </span>
+        </div>
+        <div class="controlRow">
+            <label class="controlLabel" for="pointRange">Point light range:</label>
+            <span>
+                <input type="range" id="pointRange" min="0" max="60" step="1" value="14" />
+                <span id="pointRangeText" class="slider-value">14</span>
+            </span>
+        </div>
+        <div class="controlRow">
+            <label class="controlLabel" for="useShadow">Shadow:</label>
+            <span><input type="checkbox" id="useShadow" checked="checked" /></span>
+        </div>
     </div>
 
     <script>
         // ===== math.js =====
         class MathExtend {
-            /**
-             * @param {Vector3} v0
-             * @param {Vector3} v1
-             * @param {Vector3} p
-             * @returns {number}
-             */
             static edgeFunction(v0, v1, p) {
                 return (v0.y - v1.y) * (p.x - v0.x) + (v1.x - v0.x) * (p.y - v0.y);
             }
 
-            /**
-             *
-             * @param {Number} ax
-             * @param {Number} ay
-             * @param {Number} az
-             * @param {Number} bx
-             * @param {Number} by
-             * @param {Number} bz
-             * @returns
-             */
             static hypotSquare(ax, ay, az, bx, by, bz) {
                 const dx = ax - bx;
                 const dy = ay - by;
@@ -161,11 +206,6 @@
         }
 
         class Vector2 {
-            /**
-             * @param {number} [u]
-             * @param {number} [v]
-             * @param {number} [w]
-             */
             constructor(u = 0, v = 0, w = 1) {
                 this.u = u;
                 this.v = v;
@@ -174,30 +214,15 @@
             clone() {
                 return new Vector2(this.u, this.v, this.w);
             }
-            /**
-             * @param {Vector2} vec
-             * @param {number} value
-             */
             static div(vec, value) {
                 return new Vector2(vec.u / value, vec.v / value, vec.w / value);
             }
-            /**
-             * @param {Vector2} vec1
-             * @param {Vector2} vec2
-             * @param {number} t
-             */
             static lerp(vec1, vec2, t) {
                 return new Vector2(vec1.u + (vec2.u - vec1.u) * t, vec1.v + (vec2.v - vec1.v) * t, vec1.w + (vec2.w - vec1.w) * t);
             }
         }
 
         class Vector3 {
-            /**
-             * @param {number} [x]
-             * @param {number} [y]
-             * @param {number} [z]
-             * @param {number} [w]
-             */
             constructor(x = 0, y = 0, z = 0, w = 1) {
                 this.x = x;
                 this.y = y;
@@ -205,90 +230,45 @@
                 this.w = w;
             }
 
-            /** @type {Vector3} */
             static zero;
-            /** @type {Vector3} */
             static one;
-            /** @type {Vector3} */
             static left;
-            /** @type {Vector3} */
             static right;
-            /** @type {Vector3} */
             static up;
-            /** @type {Vector3} */
             static down;
-            /** @type {Vector3} */
             static forward;
+            static back;
 
             clone() {
                 return new Vector3(this.x, this.y, this.z, this.w);
             }
 
-            /**
-             * 
-             * @param {Vector3} vec 
-             * @returns 
-             */
             equal(vec) {
                 return this.x == vec.x && this.y == vec.y && this.z == vec.z;
             }
 
-            /**
-             * @param {Vector3} vec1
-             * @param {Vector3} vec2
-             */
             static add(vec1, vec2) {
                 return new Vector3(vec1.x + vec2.x, vec1.y + vec2.y, vec1.z + vec2.z);
             }
-            /**
-             * @param {Vector3} vec1
-             * @param {Vector3} vec2
-             */
             static sub(vec1, vec2) {
                 return new Vector3(vec1.x - vec2.x, vec1.y - vec2.y, vec1.z - vec2.z);
             }
-            /**
-             * @param {Vector3} vec
-             * @param {number} value
-             */
             static mul(vec, value) {
                 return new Vector3(vec.x * value, vec.y * value, vec.z * value);
             }
-            /**
-             * @param {Vector3} vec
-             * @param {number} value
-             */
             static div(vec, value) {
                 return new Vector3(vec.x / value, vec.y / value, vec.z / value);
             }
-            /**
-             * @param {Vector3} vec1
-             * @param {Vector3} vec2
-             */
             static scale(vec1, vec2) {
                 return new Vector3(vec1.x * vec2.x, vec1.y * vec2.y, vec1.z * vec2.z);
             }
-            /**
-             * @param {Vector3} v1
-             * @param {Vector3} v2
-             * @returns {number}
-             */
             static dot(v1, v2) {
                 return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
             }
-            /**
-             * @param {Vector3} v1
-             * @param {Vector3} v2
-             */
             static cross(v1, v2) {
                 let v = new Vector3(v1.y * v2.z - v1.z * v2.y, v1.z * v2.x - v1.x * v2.z, v1.x * v2.y - v1.y * v2.x);
                 return v;
             }
-            /**
-             * @param {Vector3} v1
-             * @param {Vector3} v2
-             * @param {number} t
-             */
             static lerp(v1, v2, t) {
                 return new Vector3(v1.x + (v2.x - v1.x) * t, v1.y + (v2.y - v1.y) * t, v1.z + (v2.z - v1.z) * t, v1.w + (v2.w - v1.w) * t);
             }
@@ -304,7 +284,6 @@
                 return this;
             }
 
-            /** @param {Mat4x4} m */
             mulMat4x4(m) {
                 let x = this.x;
                 let y = this.y;
@@ -316,20 +295,11 @@
                 this.w = m.m[3][0] * x + m.m[3][1] * y + m.m[3][2] * z + m.m[3][3] * w;
             }
 
-            /**
-             * @param {Vector3} planeNormal
-             * @returns {Vector3}
-             */
             projectVectorToPlane(planeNormal) {
                 let dot = Vector3.dot(this, planeNormal);
                 return Vector3.sub(this, Vector3.mul(planeNormal, dot));
             }
 
-            /**
-             * @param {Vector3} vec1
-             * @param {Vector3} vec2
-             * @returns {[Vector3, number]}
-             */
             static getAxisAndRadianBetween(vec1, vec2) {
                 let dot = Vector3.dot(vec1, vec2);
                 let almostOne = 0.9999;
@@ -344,12 +314,6 @@
                 return [axis, angle];
             }
 
-            /**
-             * @param {Vector3} vec1
-             * @param {Vector3} vec2
-             * @param {Vector3} axis
-             * @returns {number}
-             */
             static getRadianBetweenWithAxis(vec1, vec2, axis) {
                 let projectedV1 = vec1.projectVectorToPlane(axis);
                 let projectedV2 = vec2.projectVectorToPlane(axis);
@@ -357,6 +321,7 @@
                 projectedV2.normalize();
 
                 let dot = Vector3.dot(projectedV1, projectedV2);
+                dot = Math.min(Math.max(dot, -1), 1);
                 let angle = Math.acos(dot);
 
                 let cross = Vector3.cross(projectedV1, projectedV2);
@@ -370,10 +335,10 @@
         Vector3.up = new Vector3(0, 1, 0);
         Vector3.down = new Vector3(0, -1, 0);
         Vector3.forward = new Vector3(0, 0, 1);
+        Vector3.back = new Vector3(0, 0, -1);
 
         class Mat4x4 {
             constructor() {
-                /** @type {number[][]} */
                 this.m = [
                     [0, 0, 0, 0],
                     [0, 0, 0, 0],
@@ -382,13 +347,6 @@
                 ];
             }
 
-            /**
-             * @param {number} fov
-             * @param {number} h
-             * @param {number} w
-             * @param {number} zNear
-             * @param {number} zFar
-             */
             static Projection(fov, h, w, zNear, zFar) {
                 let fovMultiplier = 1.0 / Math.tan(((fov * 0.5) / 180.0) * Math.PI);
                 let matrix = new Mat4x4();
@@ -400,11 +358,6 @@
                 return matrix;
             }
 
-            /**
-             * @param {number} size
-             * @param {number} zNear
-             * @param {number} zFar
-             */
             static Orthographic(size, zNear, zFar) {
                 let matrix = new Mat4x4();
                 matrix.m[0][0] = 2.0 / size;
@@ -415,12 +368,6 @@
                 return matrix;
             }
 
-            /**
-             * @param {Vector3} r
-             * @param {Vector3} u
-             * @param {Vector3} f
-             * @param {Vector3} t
-             */
             static View(r, u, f, t) {
                 let matrix = new Mat4x4();
                 matrix.m[0][0] = r.x;
@@ -439,24 +386,13 @@
                 return matrix;
             }
 
-            /**
-             *
-             * @param {Vector3} pos
-             * @param {Quaternion} rotation
-             * @returns
-             */
-            static ViewWithPosRot(pos, rotation) {
+            static ViewFromPosRot(pos, rotation) {
                 let forward = rotation.rotateVector(Vector3.forward);
                 let right = rotation.rotateVector(Vector3.right);
                 let up = rotation.rotateVector(Vector3.up);
                 return Mat4x4.View(right, up, forward, pos);
             }
 
-            /**
-             * @param {number} x
-             * @param {number} y
-             * @param {number} z
-             */
             static Translation(x, y, z) {
                 let matrix = new Mat4x4();
                 matrix.m[0][0] = 1;
@@ -469,11 +405,6 @@
                 return matrix;
             }
 
-            /**
-             * @param {number} x
-             * @param {number} y
-             * @param {number} z
-             */
             static Scale(x, y, z) {
                 let matrix = new Mat4x4();
                 matrix.m[0][0] = x;
@@ -485,12 +416,6 @@
         }
 
         class Quaternion {
-            /**
-             * @param {number} [a]
-             * @param {number} [b]
-             * @param {number} [c]
-             * @param {number} [d]
-             */
             constructor(a = 1, b = 0, c = 0, d = 0) {
                 this.a = a;
                 this.b = b;
@@ -498,45 +423,28 @@
                 this.d = d;
             }
 
-            /**
-             * @param {Quaternion} p
-             * @param {Quaternion} q
-             */
             static dot(p, q) {
                 return p.a * q.a + p.b * q.b + p.c * q.c + p.d * q.d;
             }
 
-            /**
-             * @param {Quaternion} from
-             * @param {Quaternion} to
-             * @param {number} t
-             */
             static lerp(from, to, t) {
                 let toA = to.a,
                     toB = to.b,
                     toC = to.c,
                     toD = to.d;
 
-                let dot = Quaternion.dot(from, to);
-                if (dot < 0) {
+                if (Quaternion.dot(from, to) < 0) {
                     toA = -toA;
                     toB = -toB;
                     toC = -toC;
                     toD = -toD;
                 }
 
-                return new Quaternion(
-                    from.a + (toA - from.a) * t,
-                    from.b + (toB - from.b) * t,
-                    from.c + (toC - from.c) * t,
-                    from.d + (toD - from.d) * t,
-                );
+                t = Math.min(Math.max(t, 0), 1);
+
+                return new Quaternion(from.a + (toA - from.a) * t, from.b + (toB - from.b) * t, from.c + (toC - from.c) * t, from.d + (toD - from.d) * t);
             }
 
-            /**
-             * @param {Vector3} axis
-             * @param {number} angle
-             */
             static buildQuaternionAxisAngle(axis, angle) {
                 let radian = (angle / 180.0) * Math.PI;
                 const half = radian / 2;
@@ -544,17 +452,16 @@
                 return new Quaternion(Math.cos(half), axis.x * s, axis.y * s, axis.z * s);
             }
 
-            /**
-             * @param {Vector3} axis
-             * @param {number} angle
-             */
+            static isClose(a, b, margin) {
+                return 1 - Math.abs(Quaternion.dot(a, b)) < margin;
+            }
+
             static buildQuaternionAxisRadian(axis, angle) {
                 const half = angle / 2.0;
                 const s = -Math.sin(half);
                 return new Quaternion(Math.cos(half), axis.x * s, axis.y * s, axis.z * s);
             }
 
-            /** @param {Vector3} eulerAngles */
             static buildQuaternionEuler(eulerAngles) {
                 const a = (eulerAngles.x / 180) * Math.PI * 0.5;
                 const b = (eulerAngles.y / 180) * Math.PI * 0.5;
@@ -575,10 +482,6 @@
                 );
             }
 
-            /**
-             * @param {Quaternion} p
-             * @param {Quaternion} q
-             */
             static multiply(p, q) {
                 let a = p.a * q.a - p.b * q.b - p.c * q.c - p.d * q.d;
                 let b = p.a * q.b + p.b * q.a + p.c * q.d - p.d * q.c;
@@ -591,25 +494,18 @@
                 return new Quaternion(this.a, -this.b, -this.c, -this.d);
             }
 
-            /** @param {Vector3} v */
             rotateVector(v) {
                 const qVec = new Quaternion(0, v.x, v.y, v.z);
                 const res = Quaternion.multiply(Quaternion.multiply(this, qVec), this.conjugate());
                 return new Vector3(res.b, res.c, res.d);
             }
 
-            /** @param {Vector3} v */
             inverseRotateVector(v) {
                 const qVec = new Quaternion(0, v.x, v.y, v.z);
                 const res = Quaternion.multiply(Quaternion.multiply(this.conjugate(), qVec), this);
                 return new Vector3(res.b, res.c, res.d);
             }
 
-            /**
-             * @param {Vector3} forward
-             * @param {Vector3} up
-             * @returns {Quaternion}
-             */
             static lookRotation(forward, up) {
                 let [fixForwardAxis, fixForwardAngle] = Vector3.getAxisAndRadianBetween(Vector3.forward, forward);
                 let firstRotation = Quaternion.buildQuaternionAxisRadian(fixForwardAxis, fixForwardAngle);
@@ -628,26 +524,16 @@
         }
 
         class Plane {
-            /**
-             * @param {Vector3} normal
-             * @param {Vector3} P
-             */
             constructor(normal, P) {
                 this.normal = normal.normalize();
                 this.P = P;
                 this.D = Vector3.dot(this.normal, this.P);
             }
 
-            /** @param {Vector3} p */
             isPointInFrontOfPlane(p) {
                 return Vector3.dot(p, this.normal) >= this.D;
             }
 
-            /**
-             * @param {Vector3} A
-             * @param {Vector3} B
-             * @returns {[number, Vector3]} how far along AB the plane sits, and the intersection point
-             */
             intersectWithLine(A, B) {
                 let An = Vector3.dot(A, this.normal);
                 let Bn = Vector3.dot(B, this.normal);
@@ -657,15 +543,10 @@
                 return [t, Vector3.add(A, vectorAM)];
             }
 
-            /**
-             * @param {Vector3} p
-             * @returns {number}
-             */
             distanceToPoint(p) {
                 return Vector3.dot(p, this.normal) - this.D;
             }
 
-            /** @param {MathTriangle[]} tris */
             isIntersectingWithTris(tris) {
                 for (let tri of tris) {
                     if (tri.isIntersectingPlane(this)) return true;
@@ -673,10 +554,6 @@
                 return false;
             }
 
-            /**
-             * @param {MathTriangle[]} tris
-             * @returns {MathTriangle[]}
-             */
             clipWithTris(tris) {
                 let clippedTris = [];
                 for (let tri of tris) {
@@ -687,13 +564,6 @@
         }
 
         class BoundingBox {
-            /**
-             *
-             * @param {Number} minX
-             * @param {Number} maxX
-             * @param {Number} minY
-             * @param {Number} maxY
-             */
             constructor(minX, maxX, minY, maxY) {
                 this.minX = minX;
                 this.maxX = maxX;
@@ -705,12 +575,6 @@
                 return this.minX <= this.maxX && this.minY <= this.maxY;
             }
 
-            /**
-             *
-             * @param {BoundingBox} bbox1
-             * @param {BoundingBox} bbox2
-             * @returns
-             */
             static union(bbox1, bbox2) {
                 return new BoundingBox(
                     Math.min(bbox1.minX, bbox2.minX),
@@ -720,12 +584,6 @@
                 );
             }
 
-            /**
-             *
-             * @param {BoundingBox} bbox1
-             * @param {BoundingBox} bbox2
-             * @returns
-             */
             static intersect(bbox1, bbox2) {
                 return new BoundingBox(
                     Math.max(bbox1.minX, bbox2.minX),
@@ -735,12 +593,6 @@
                 );
             }
 
-            /**
-             *
-             * @param {BoundingBox} bbox1
-             * @param {BoundingBox} bbox2
-             * @returns
-             */
             static isOverlap(bbox1, bbox2) {
                 return (
                     ((bbox1.minX < bbox2.maxX && bbox1.maxX > bbox2.minX) || (bbox2.minX < bbox1.maxX && bbox2.maxX > bbox1.minX)) &&
@@ -750,10 +602,8 @@
         }
 
         class MathTriangle {
-            /** @param {Vector3[]} [vertices] */
             constructor(vertices = []) {
                 if (vertices.length == 0) {
-                    /** @type {Vector3[]} */
                     this.vertices = [];
                     for (let i = 0; i < 3; i++) {
                         this.vertices.push(new Vector3(0, 0, 0));
@@ -773,14 +623,12 @@
                 return tri;
             }
 
-            /** @param {Mat4x4} m */
             mulMat4x4(m) {
                 for (let v of this.vertices) {
                     v.mulMat4x4(m);
                 }
             }
 
-            /** @param {Quaternion} q */
             rotate(q) {
                 for (let i = 0; i < this.vertices.length; i++) {
                     this.vertices[i] = q.rotateVector(this.vertices[i]);
@@ -809,10 +657,6 @@
                 }
             }
 
-            /**
-             * @param {Plane} plane
-             * @returns {boolean}
-             */
             isIntersectingPlane(plane) {
                 for (let i = 0; i < this.vertices.length; i++) {
                     let next = (i + 1) % this.vertices.length;
@@ -823,17 +667,10 @@
                 return false;
             }
 
-            /**
-             * @param {Plane} plane
-             * @returns {MathTriangle[]}
-             */
             clipAgainstPlane(plane) {
-                /** @type {MathTriangle[]} */
                 let outTris = [];
 
-                /** @type {number[]} */
                 let frontPoints = [];
-                /** @type {number[]} */
                 let behindPoints = [];
 
                 for (let i = 0; i < this.vertices.length; i++) {
@@ -880,11 +717,6 @@
                 return outTris;
             }
 
-            /**
-             * @param {number} maxWidth
-             * @param {number} maxHeight
-             * @returns {BoundingBox}
-             */
             boundingBox(maxWidth, maxHeight) {
                 let minX = Math.min(this.vertices[0].x, this.vertices[1].x, this.vertices[2].x);
                 let maxX = Math.max(this.vertices[0].x, this.vertices[1].x, this.vertices[2].x);
@@ -906,22 +738,12 @@
 
         // ===== graphics.js =====
         class Color {
-            /**
-             * @param {number} r
-             * @param {number} g
-             * @param {number} b
-             */
             constructor(r, g, b) {
                 this.r = r;
                 this.g = g;
                 this.b = b;
             }
 
-            /**
-             * @param {number} r
-             * @param {number} g
-             * @param {number} b
-             */
             updateColor(r, g, b) {
                 this.r = r;
                 this.g = g;
@@ -934,21 +756,17 @@
         }
 
         class Texture {
-            /** @param {string} url */
             constructor(url) {
-                /** @type {Uint8ClampedArray | null} */
                 this.pixels = null;
                 this.width = 0;
                 this.height = 0;
                 if (url) this.load(url);
             }
 
-            /** @param {string} url */
             async load(url) {
                 const img = new Image();
                 img.crossOrigin = "anonymous";
                 img.src = url;
-                /** @type {Promise<void>} */
                 const loaded = new Promise((resolve) => {
                     img.onload = () => {
                         resolve();
@@ -958,7 +776,7 @@
                 const tempCanvas = document.createElement("canvas");
                 tempCanvas.width = img.width;
                 tempCanvas.height = img.height;
-                const tempCtx = /** @type {CanvasRenderingContext2D} */ (tempCanvas.getContext("2d"));
+                const tempCtx = (tempCanvas.getContext("2d"));
                 tempCtx.drawImage(img, 0, 0);
                 this.pixels = tempCtx.getImageData(0, 0, img.width, img.height).data;
                 this.width = img.width;
@@ -967,17 +785,13 @@
         }
 
         // ===== engine.js =====
+        let maxActiveLights = 16;
+        let ambientLight = 0.2;
         let shadowMapSize = 512;
         let shadowBias = 0.01;
         let shadowMapDistance = 20;
 
         class Camera {
-            /**
-             * @param {Vector3} pos
-             * @param {Vector3} euler
-             * @param {number} speed
-             * @param {number} sensitivity
-             */
             constructor(pos, euler, speed, sensitivity) {
                 this.pos = pos;
                 this.rotation = Quaternion.buildQuaternionEuler(euler);
@@ -985,13 +799,8 @@
                 this.sensitivity = sensitivity;
             }
 
-            /**
-             * @param {number} zNear
-             * @param {number} zFar
-             * @param {number} [customZFar] overrides zFar when not -1
-             */
             getFrustumCenter(zNear, zFar, customZFar = -1) {
-                let forward = this.rotation.rotateVector(Vector3.forward);
+                let forward = this.getForward();
 
                 let near = Vector3.add(this.pos, Vector3.mul(forward, zNear));
                 if (customZFar == -1) customZFar = zFar;
@@ -999,10 +808,6 @@
                 return Vector3.div(Vector3.add(near, far), 2);
             }
 
-            /**
-             * @param {number} mouseMovementX
-             * @param {number} mouseMovementY
-             */
             updateRotation(mouseMovementX, mouseMovementY) {
                 let q = Quaternion.buildQuaternionAxisAngle(Vector3.up, -mouseMovementX * this.sensitivity);
 
@@ -1012,12 +817,8 @@
                 this.rotation = Quaternion.multiply(q, this.rotation);
             }
 
-            /**
-             * @param {number} dt
-             * @param {Record<string, boolean>} keyStates
-             */
             updateMovement(dt, keyStates) {
-                let forward = this.rotation.rotateVector(Vector3.forward);
+                let forward = this.getForward();
                 let right = this.rotation.rotateVector(Vector3.right);
 
                 if (keyStates["w"]) {
@@ -1040,22 +841,20 @@
                 }
             }
 
+            getForward() {
+                let res = this.rotation.rotateVector(Vector3.forward);
+                res.normalize();
+                return res;
+            }
+
             getViewMatrix() {
-                return Mat4x4.ViewWithPosRot(this.pos, this.rotation);
+                return Mat4x4.ViewFromPosRot(this.pos, this.rotation);
             }
         }
 
         class GameObject {
             static incrementingID = 0;
 
-            /**
-             * @param {Vector3} pos
-             * @param {Vector3} eulerAngles
-             * @param {Vector3} scale
-             * @param {Color} color
-             * @param {Mesh} mesh
-             * @param {Texture | null} [texture]
-             */
             constructor(pos, eulerAngles, scale, color, mesh, texture = null) {
                 this.id = GameObject.incrementingID++;
                 this.pos = pos;
@@ -1066,19 +865,16 @@
                 this.texture = texture;
             }
 
-            /**
-             * @param {number} eulerX
-             * @param {number} eulerY
-             * @param {number} eulerZ
-             */
             rotate(eulerX, eulerY, eulerZ) {
                 let q = Quaternion.buildQuaternionEuler(new Vector3(eulerX, eulerY, eulerZ));
                 this.rotation = Quaternion.multiply(q, this.rotation);
             }
 
-            /** @returns {Triangle[]} */
+            getForward() {
+                return this.rotation.rotateVector(Vector3.forward);
+            }
+
             getTransformedTriangles() {
-                /** @type {Triangle[]} */
                 let transformedTris = [];
                 for (let tri of this.mesh.tris) {
                     let transformedTri = tri.clone();
@@ -1094,19 +890,13 @@
         }
 
         class DirectionalLight {
-            /**
-             * @param {Vector3} dir
-             * @param {number} intensity
-             */
             constructor(dir, intensity) {
                 this.dir = dir.normalize();
                 this.intensity = intensity;
                 this.viewMatrix = new Mat4x4();
                 this.projectionMatrix = new Mat4x4();
-                /** @type {number[][]} */
                 this.shadowMap = [];
                 for (let i = 0; i < shadowMapSize; i++) {
-                    /** @type {number[]} */
                     let row = [];
                     for (let j = 0; j < shadowMapSize; j++) {
                         row.push(Infinity);
@@ -1126,7 +916,6 @@
                 this.projectionMatrix = Mat4x4.Orthographic(shadowMapDistance, 0.1, shadowMapDistance);
             }
 
-            /** @param {Triangle[]} tris */
             buildShadowMap(tris) {
                 for (let i = 0; i < shadowMapSize; i++) {
                     for (let j = 0; j < shadowMapSize; j++) {
@@ -1181,10 +970,6 @@
                 }
             }
 
-            /**
-             * @param {Vector3} pixelWorldPos
-             * @param {Vector3} triWorldNormal
-             */
             isInShadow(pixelWorldPos, triWorldNormal) {
                 let dotProduct = Vector3.dot(triWorldNormal, this.dir);
                 if (dotProduct >= 0) return false;
@@ -1208,12 +993,6 @@
         }
 
         class Rasterizer {
-            /**
-             * @param {Number} canvasWidth
-             * @param {Number} canvasHeight
-             * @param {CanvasRenderingContext2D} ctx
-             * @param {HTMLParagraphElement} asciiParagraph
-             */
             constructor(canvasWidth, canvasHeight, ctx, asciiParagraph) {
                 this.canvasWidth = canvasWidth;
                 this.canvasHeight = canvasHeight;
@@ -1226,13 +1005,10 @@
 
                 this.screenBuffer.fill(255);
                 this.depthBuffer.fill(Infinity);
+
+                this.activeLights = new Array(maxActiveLights);
             }
 
-            /**
-             *
-             * @param {Number} canvasWidth
-             * @param {Number} canvasHeight
-             */
             resize(canvasWidth, canvasHeight) {
                 this.canvasWidth = canvasWidth;
                 this.canvasHeight = canvasHeight;
@@ -1250,131 +1026,169 @@
                 this.depthBuffer.fill(Infinity);
             }
 
-            /**
-             * @param {Triangle[]} tris
-             * @param {DirectionalLight} dirLight
-             * @param {number} pointLightIntensity
-             * @param {GameObject[]} pointLights
-             * @param {Number} pointLightRange
-             * @param {boolean} useShadow
-             */
             rasterizeClipSpaceTriangles(tris, dirLight, pointLightIntensity, pointLights, pointLightRange, useShadow) {
-
+                const screenBuffer = this.screenBuffer;
+                const depthBuffer = this.depthBuffer;
+                const canvasWidth = this.canvasWidth;
+                const canvasHeight = this.canvasHeight;
+                const activeLights = this.activeLights;
                 const pointLightRange2 = pointLightRange * pointLightRange;
 
                 for (let tri of tris) {
                     let vertices = tri.vertices;
                     for (let i = 0; i < vertices.length; i++) {
                         vertices[i] = new Vector3(
-                            vertices[i].x * (this.canvasWidth / 2) + this.canvasWidth / 2,
-                            -vertices[i].y * (this.canvasHeight / 2) + this.canvasHeight / 2,
+                            vertices[i].x * (canvasWidth / 2) + canvasWidth / 2,
+                            -vertices[i].y * (canvasHeight / 2) + canvasHeight / 2,
                             vertices[i].z,
                         );
                     }
 
                     tri.calculateSignedDoubleArea();
+                    const signedDoubleArea = tri.signedDoubleArea;
 
-                    let triWorldNormal = tri.getWorldNormal();
-                    let dirLightDiffuse = (1 - (Vector3.dot(triWorldNormal, dirLight.dir) + 1) / 2) * dirLight.intensity;
-                    let activeLights = pointLightIntensity > 0 ? tri.getPointLightsThatCanAffectTri(pointLightRange, pointLights) : [];
+                    const triWorldNormal = tri.getWorldNormal();
+                    const worldNormalX = triWorldNormal.x,
+                        worldNormalY = triWorldNormal.y,
+                        worldNormalZ = triWorldNormal.z;
 
-                    const bbox = tri.boundingBox(this.canvasWidth, this.canvasHeight);
+                    const dirLightDiffuse = (1 - (Vector3.dot(triWorldNormal, dirLight.dir) + 1) / 2) * dirLight.intensity;
+                    const activeLightCount = pointLightIntensity > 0 ? tri.getPointLightsThatCanAffectTri(pointLightRange, pointLights, activeLights) : 0;
+
+                    const bbox = tri.boundingBox(canvasWidth, canvasHeight);
 
                     let edgeFunctionRow01 = MathExtend.edgeFunction(tri.vertices[0], tri.vertices[1], new Vector3(bbox.minX, bbox.minY, 0));
                     let edgeFunctionRow12 = MathExtend.edgeFunction(tri.vertices[1], tri.vertices[2], new Vector3(bbox.minX, bbox.minY, 0));
                     let edgeFunctionRow20 = MathExtend.edgeFunction(tri.vertices[2], tri.vertices[0], new Vector3(bbox.minX, bbox.minY, 0));
 
-                    let perspectiveWorldVertices = [
-                        Vector3.mul(tri.worldVertices[0], tri.uv[0].w),
-                        Vector3.mul(tri.worldVertices[1], tri.uv[1].w),
-                        Vector3.mul(tri.worldVertices[2], tri.uv[2].w),
-                    ];
+                    // everything the per pixel loop needs, read once instead of once per pixel
+                    const vertex0 = tri.vertices[0],
+                        vertex1 = tri.vertices[1],
+                        vertex2 = tri.vertices[2];
+                    const vertex0Z = vertex0.z,
+                        vertex1Z = vertex1.z,
+                        vertex2Z = vertex2.z;
+
+                    const edgeSlopeX01 = vertex0.y - vertex1.y;
+                    const edgeSlopeX12 = vertex1.y - vertex2.y;
+                    const edgeSlopeX20 = vertex2.y - vertex0.y;
+                    const edgeSlopeY01 = vertex1.x - vertex0.x;
+                    const edgeSlopeY12 = vertex2.x - vertex1.x;
+                    const edgeSlopeY20 = vertex0.x - vertex2.x;
+
+                    const uv0 = tri.uv[0],
+                        uv1 = tri.uv[1],
+                        uv2 = tri.uv[2];
+                    const uv0U = uv0.u,
+                        uv1U = uv1.u,
+                        uv2U = uv2.u;
+                    const uv0V = uv0.v,
+                        uv1V = uv1.v,
+                        uv2V = uv2.v;
+                    const uv0W = uv0.w,
+                        uv1W = uv1.w,
+                        uv2W = uv2.w;
+
+                    const world0 = tri.worldVertices[0],
+                        world1 = tri.worldVertices[1],
+                        world2 = tri.worldVertices[2];
+                    const perspectiveWorld0X = world0.x * uv0W,
+                        perspectiveWorld0Y = world0.y * uv0W,
+                        perspectiveWorld0Z = world0.z * uv0W;
+                    const perspectiveWorld1X = world1.x * uv1W,
+                        perspectiveWorld1Y = world1.y * uv1W,
+                        perspectiveWorld1Z = world1.z * uv1W;
+                    const perspectiveWorld2X = world2.x * uv2W,
+                        perspectiveWorld2Y = world2.y * uv2W,
+                        perspectiveWorld2Z = world2.z * uv2W;
+
+                    const triColor = tri.color;
+                    const texture = tri.texture;
+                    const texturePixels = texture ? texture.pixels : null;
+                    const textureWidth = texture ? texture.width : 0,
+                        textureHeight = texture ? texture.height : 0;
 
                     for (let y = bbox.minY; y <= bbox.maxY; y++) {
                         let edgeFunction01 = edgeFunctionRow01;
                         let edgeFunction12 = edgeFunctionRow12;
                         let edgeFunction20 = edgeFunctionRow20;
-                        let pixelIndex = y * this.canvasWidth + bbox.minX;
+                        let pixelIndex = y * canvasWidth + bbox.minX;
                         for (let x = bbox.minX; x <= bbox.maxX; x++) {
                             if (edgeFunction01 > 0 && edgeFunction12 > 0 && edgeFunction20 > 0) {
-                                const baryCoord0 = edgeFunction12 / tri.signedDoubleArea;
-                                const baryCoord1 = edgeFunction20 / tri.signedDoubleArea;
-                                const baryCoord2 = edgeFunction01 / tri.signedDoubleArea;
-                                const z = tri.vertices[0].z * baryCoord0 + tri.vertices[1].z * baryCoord1 + tri.vertices[2].z * baryCoord2;
+                                const baryCoord0 = edgeFunction12 / signedDoubleArea;
+                                const baryCoord1 = edgeFunction20 / signedDoubleArea;
+                                const baryCoord2 = edgeFunction01 / signedDoubleArea;
+                                const z = vertex0Z * baryCoord0 + vertex1Z * baryCoord1 + vertex2Z * baryCoord2;
 
-                                if (z < this.depthBuffer[pixelIndex]) {
-                                    this.depthBuffer[pixelIndex] = z;
+                                if (z < depthBuffer[pixelIndex]) {
+                                    depthBuffer[pixelIndex] = z;
 
-                                    let pixelInvZ = tri.uv[0].w * baryCoord0 + tri.uv[1].w * baryCoord1 + tri.uv[2].w * baryCoord2;
+                                    const pixelInvZ = uv0W * baryCoord0 + uv1W * baryCoord1 + uv2W * baryCoord2;
 
-                                    let pixelWorldPos = new Vector3(
-                                        perspectiveWorldVertices[0].x * baryCoord0 +
-                                            perspectiveWorldVertices[1].x * baryCoord1 +
-                                            perspectiveWorldVertices[2].x * baryCoord2,
-                                        perspectiveWorldVertices[0].y * baryCoord0 +
-                                            perspectiveWorldVertices[1].y * baryCoord1 +
-                                            perspectiveWorldVertices[2].y * baryCoord2,
-                                        perspectiveWorldVertices[0].z * baryCoord0 +
-                                            perspectiveWorldVertices[1].z * baryCoord1 +
-                                            perspectiveWorldVertices[2].z * baryCoord2,
-                                    );
-                                    pixelWorldPos = Vector3.div(pixelWorldPos, pixelInvZ);
+                                    const pixelWorldX =
+                                        (perspectiveWorld0X * baryCoord0 + perspectiveWorld1X * baryCoord1 + perspectiveWorld2X * baryCoord2) / pixelInvZ;
+                                    const pixelWorldY =
+                                        (perspectiveWorld0Y * baryCoord0 + perspectiveWorld1Y * baryCoord1 + perspectiveWorld2Y * baryCoord2) / pixelInvZ;
+                                    const pixelWorldZ =
+                                        (perspectiveWorld0Z * baryCoord0 + perspectiveWorld1Z * baryCoord1 + perspectiveWorld2Z * baryCoord2) / pixelInvZ;
 
-                                    let inShadow = useShadow ? dirLight.isInShadow(pixelWorldPos, triWorldNormal) : false;
-                                    let shadowFactor = inShadow ? 0.5 : 1.0;
+                                    let shadowFactor = 1.0;
+                                    if (useShadow && dirLight.isInShadow(new Vector3(pixelWorldX, pixelWorldY, pixelWorldZ), triWorldNormal)) {
+                                        shadowFactor = 0.5;
+                                    }
 
-                                    let pointLightDiffuse = 0;
+                                    let totalPointLightDiffuse = 0;
                                     if (pointLightIntensity > 0) {
-                                        for (let i = 0; i < activeLights.length; i++) {
+                                        for (let i = 0; i < activeLightCount; i++) {
                                             const lightPos = activeLights[i];
-                                            const pointLightVecX = pixelWorldPos.x - lightPos.x;
-                                            const pointLightVecY = pixelWorldPos.y - lightPos.y;
-                                            const pointLightVecZ = pixelWorldPos.z - lightPos.z;
+                                            const pointLightVecX = lightPos.x - pixelWorldX;
+                                            const pointLightVecY = lightPos.y - pixelWorldY;
+                                            const pointLightVecZ = lightPos.z - pixelWorldZ;
                                             const distanceFromPixelToPointLight2 =
                                                 pointLightVecX * pointLightVecX + pointLightVecY * pointLightVecY + pointLightVecZ * pointLightVecZ;
                                             if (distanceFromPixelToPointLight2 >= pointLightRange2) continue;
 
                                             const distance = Math.sqrt(distanceFromPixelToPointLight2);
-                                            const dot =
-                                                (triWorldNormal.x * pointLightVecX + triWorldNormal.y * pointLightVecY + triWorldNormal.z * pointLightVecZ) / distance;
-                                            const falloff = 1 - distanceFromPixelToPointLight2 / pointLightRange2;
-                                            const attenuation = (falloff * falloff) / (1 + 0.1 * distanceFromPixelToPointLight2);
-                                            pointLightDiffuse += (1 - (dot + 1) / 2) * attenuation;
+                                            const dot = (worldNormalX * pointLightVecX + worldNormalY * pointLightVecY + worldNormalZ * pointLightVecZ) / distance;
+                                            const currentPointLightDiffuse = (1 + dot) / 2;
+                                            const pointLightDistanceRatio = distanceFromPixelToPointLight2 / pointLightRange2;
+                                            const inverseSquareDistance = 1 / (1 + 0.02 * distanceFromPixelToPointLight2);
+                                            const attenuation = (1 - pointLightDistanceRatio) * inverseSquareDistance;
+                                            totalPointLightDiffuse += currentPointLightDiffuse * attenuation;
                                         }
-                                        pointLightDiffuse *= pointLightIntensity;
+                                        totalPointLightDiffuse *= pointLightIntensity;
                                     }
 
-                                    let lightIntensity = (dirLightDiffuse + pointLightDiffuse) * shadowFactor;
+                                    const lightIntensity = Math.max(ambientLight, (dirLightDiffuse + totalPointLightDiffuse) * shadowFactor);
 
-                                    let texColor = tri.color;
-                                    if (tri.texture && tri.texture.pixels) {
-                                        let pixelUV = new Vector2(
-                                            tri.uv[0].u * baryCoord0 + tri.uv[1].u * baryCoord1 + tri.uv[2].u * baryCoord2,
-                                            tri.uv[0].v * baryCoord0 + tri.uv[1].v * baryCoord1 + tri.uv[2].v * baryCoord2,
-                                            pixelInvZ,
-                                        );
-                                        pixelUV = Vector2.div(pixelUV, pixelUV.w);
-
-                                        const texX = Math.floor(pixelUV.u * (tri.texture.width - 1));
-                                        const texY = Math.floor(pixelUV.v * (tri.texture.height - 1));
-                                        const texIndex = (texY * tri.texture.width + texX) * 4;
-                                        texColor = new Color(tri.texture.pixels[texIndex], tri.texture.pixels[texIndex + 1], tri.texture.pixels[texIndex + 2]);
+                                    let texR = triColor.r,
+                                        texG = triColor.g,
+                                        texB = triColor.b;
+                                    if (texturePixels) {
+                                        const pixelU = (uv0U * baryCoord0 + uv1U * baryCoord1 + uv2U * baryCoord2) / pixelInvZ;
+                                        const pixelV = (uv0V * baryCoord0 + uv1V * baryCoord1 + uv2V * baryCoord2) / pixelInvZ;
+                                        const texX = Math.floor(pixelU * (textureWidth - 1));
+                                        const texY = Math.floor(pixelV * (textureHeight - 1));
+                                        const texIndex = (texY * textureWidth + texX) * 4;
+                                        texR = texturePixels[texIndex];
+                                        texG = texturePixels[texIndex + 1];
+                                        texB = texturePixels[texIndex + 2];
                                     }
 
                                     const colorIndex = pixelIndex * 4;
-                                    this.screenBuffer[colorIndex] = Math.min(255, texColor.r * lightIntensity);
-                                    this.screenBuffer[colorIndex + 1] = Math.min(255, texColor.g * lightIntensity);
-                                    this.screenBuffer[colorIndex + 2] = Math.min(255, texColor.b * lightIntensity);
+                                    screenBuffer[colorIndex] = Math.min(255, texR * lightIntensity);
+                                    screenBuffer[colorIndex + 1] = Math.min(255, texG * lightIntensity);
+                                    screenBuffer[colorIndex + 2] = Math.min(255, texB * lightIntensity);
                                 }
                             }
-                            edgeFunction01 += tri.vertices[0].y - tri.vertices[1].y;
-                            edgeFunction12 += tri.vertices[1].y - tri.vertices[2].y;
-                            edgeFunction20 += tri.vertices[2].y - tri.vertices[0].y;
+                            edgeFunction01 += edgeSlopeX01;
+                            edgeFunction12 += edgeSlopeX12;
+                            edgeFunction20 += edgeSlopeX20;
                             pixelIndex++;
                         }
-                        edgeFunctionRow01 += tri.vertices[1].x - tri.vertices[0].x;
-                        edgeFunctionRow12 += tri.vertices[2].x - tri.vertices[1].x;
-                        edgeFunctionRow20 += tri.vertices[0].x - tri.vertices[2].x;
+                        edgeFunctionRow01 += edgeSlopeY01;
+                        edgeFunctionRow12 += edgeSlopeY12;
+                        edgeFunctionRow20 += edgeSlopeY20;
                     }
                 }
             }
@@ -1403,18 +1217,12 @@
 
         // ===== mesh.js =====
         class Triangle extends MathTriangle {
-            /**
-             * @param {Vector3[]} [vertices]
-             * @param {Vector2[]} [uv]
-             * @param {Color} [color]
-             */
             constructor(vertices = [], uv = [], color = new Color(255, 255, 255)) {
                 super(vertices);
 
                 this.uv = uv;
                 this.worldVertices = [this.vertices[0].clone(), this.vertices[1].clone(), this.vertices[2].clone()];
                 this.color = color;
-                /** @type {Texture | null} */
                 this.texture = null;
             }
 
@@ -1430,17 +1238,10 @@
                 return tri;
             }
 
-            /**
-             * @param {Plane} plane
-             * @returns {Triangle[]}
-             */
             clipAgainstPlane(plane) {
-                /** @type {Triangle[]} */
                 let outTris = [];
 
-                /** @type {number[]} */
                 let frontPoints = [];
-                /** @type {number[]} */
                 let behindPoints = [];
 
                 for (let i = 0; i < this.vertices.length; i++) {
@@ -1545,13 +1346,7 @@
                 super.perspectiveDivide();
             }
 
-            /**
-             * 
-             * @param {Number} pointLightRange 
-             * @param {GameObject[]} pointLights 
-             * @returns {Vector3[]}
-             */
-            getPointLightsThatCanAffectTri(pointLightRange, pointLights) {
+            getPointLightsThatCanAffectTri(pointLightRange, pointLights, outLights) {
                 let triWorldNormal = this.getWorldNormal();
 
                 const triWorldCenterX = (this.worldVertices[0].x + this.worldVertices[1].x + this.worldVertices[2].x) / 3;
@@ -1575,7 +1370,7 @@
 
                 const triPlaneD = Vector3.dot(triWorldNormal, this.worldVertices[0]);
 
-                let activeLights = [];
+                let count = 0;
                 for (let i = 0; i < pointLights.length; i++) {
                     const lightPos = pointLights[i].pos;
 
@@ -1584,22 +1379,19 @@
                     const lightDistance2 = MathExtend.hypotSquare(lightPos.x, lightPos.y, lightPos.z, triWorldCenterX, triWorldCenterY, triWorldCenterZ);
                     if (lightDistance2 > reach * reach) continue;
 
-                    activeLights.push(lightPos);
+                    outLights[count] = lightPos;
+                    count++;
+                    if (count == outLights.length) break;
                 }
-                return activeLights;
+                return count;
             }
         }
 
         class Mesh {
-            /** @param {Triangle[]} [tris] */
             constructor(tris = []) {
                 this.tris = tris;
             }
 
-            /**
-             * @param {Triangle[]} tris
-             * @param {Color} [color]
-             */
             setTriangles(tris, color = new Color(255, 255, 255)) {
                 this.tris = [];
                 for (let tri of tris) {
@@ -1649,7 +1441,6 @@
             }
 
             static generateInitialTriangles() {
-                /** @type {Triangle[]} */
                 let tris = [];
                 let color = new Color(255, 255, 255);
 
@@ -1759,13 +1550,11 @@
         }
 
         class ObjMesh extends Mesh {
-            /** @param {string} objURL */
             constructor(objURL) {
                 super();
                 this.load(objURL);
             }
 
-            /** @param {string} url */
             async load(url) {
                 const response = await fetch(url);
                 const objText = await response.text();
@@ -1773,16 +1562,9 @@
                 this.setTriangles(triangles);
             }
 
-            /**
-             * @param {string} objText
-             * @returns {Triangle[]}
-             */
             parseOBJ(objText) {
-                /** @type {Vector3[]} */
                 const vertices = [];
-                /** @type {Vector2[]} */
                 const uvs = [];
-                /** @type {Triangle[]} */
                 const triangles = [];
                 const lines = objText.split("\n");
 
@@ -1798,9 +1580,7 @@
                     } else if (line.startsWith("f ")) {
                         const vertexInfoStrs = line.split(" ").slice(1);
 
-                        /** @type {Vector3[]} */
                         let triVertices = [];
-                        /** @type {Vector2[]} */
                         let triUVs = [];
                         for (let vertexInfoStr of vertexInfoStrs) {
                             const vertexInfo = vertexInfoStr.split("/");
@@ -1820,11 +1600,9 @@
         }
 
         // ===== index.js =====
-        /** @typedef {import("./mesh.js").Triangle} Triangle */
-
-        const gameCanvas = /** @type {HTMLCanvasElement} */ (document.getElementById("gameCanvas"));
-        const ctx = /** @type {CanvasRenderingContext2D} */ (gameCanvas.getContext("2d"));
-        const asciiParagraph = /** @type {HTMLParagraphElement} */ (document.getElementById("asciiParagraph"));
+        const gameCanvas = (document.getElementById("gameCanvas"));
+        const ctx = (gameCanvas.getContext("2d"));
+        const asciiParagraph = (document.getElementById("asciiParagraph"));
         const rasterizer = new Rasterizer(gameCanvas.width, gameCanvas.height, ctx, asciiParagraph);
         const fov = 60;
         let znear = 0.01,
@@ -1832,19 +1610,18 @@
         let projectionMatrix = Mat4x4.Projection(fov, gameCanvas.height, gameCanvas.width, znear, zfar);
         let camera = new Camera(new Vector3(0, 10, -10), new Vector3(-25, 0, 0), 5, 0.2);
         let nearPlane = new Plane(Vector3.forward, new Vector3(0, 0, znear));
-        /** @type {Record<string, boolean>} */
         let keyStates = {};
 
-        const asciiCheckBox = /** @type {HTMLInputElement} */ (document.getElementById("useASCII"));
-        const asciiResRow = /** @type {HTMLElement} */ (document.getElementById("asciiResRow"));
-        const canvasResRow = /** @type {HTMLElement} */ (document.getElementById("canvasResRow"));
-        const renderDiv = /** @type {HTMLElement} */ (document.getElementById("render"));
-        const mouseLookButton = /** @type {HTMLInputElement} */ (document.getElementById("mouseLookButton"));
+        const asciiCheckBox = (document.getElementById("useASCII"));
+        const asciiResRow = (document.getElementById("asciiResRow"));
+        const canvasResRow = (document.getElementById("canvasResRow"));
+        const renderDiv = (document.getElementById("render"));
+        const mouseLookButton = (document.getElementById("mouseLookButton"));
 
-        const canvasResWidthInput = /** @type {HTMLInputElement} */ (document.getElementById("canvasResWidth"));
-        const canvasResHeightInput = /** @type {HTMLInputElement} */ (document.getElementById("canvasResHeight"));
-        const asciiResWidthInput = /** @type {HTMLInputElement} */ (document.getElementById("asciiResWidth"));
-        const asciiResHeightInput = /** @type {HTMLInputElement} */ (document.getElementById("asciiResHeight"));
+        const canvasResWidthInput = (document.getElementById("canvasResWidth"));
+        const canvasResHeightInput = (document.getElementById("canvasResHeight"));
+        const asciiResWidthInput = (document.getElementById("asciiResWidth"));
+        const asciiResHeightInput = (document.getElementById("asciiResHeight"));
 
         let useASCII = false;
         let asciiWidth = 260;
@@ -1855,31 +1632,33 @@
         canvasResWidthInput.value = canvasRenderWidth.toString();
         canvasResHeightInput.value = canvasRenderHeight.toString();
 
-        const fpsInfo = /** @type {HTMLElement} */ (document.getElementById("fps"));
+        const fpsInfo = (document.getElementById("fps"));
         let frames = 0,
             fpsTimeCounter = 0;
 
-        const mobileControls = /** @type {HTMLElement} */ (document.getElementById("mobileControls"));
-        const mobileControlsButton = /** @type {HTMLInputElement} */ (document.getElementById("mobileControlsButton"));
+        const mobileControls = (document.getElementById("mobileControls"));
+        const mobileControlsButton = (document.getElementById("mobileControlsButton"));
 
         let lookInput = { x: 0, y: 0 };
         let lookSpeed = 450;
 
-        const lightDirIntensitySlider = /** @type {HTMLInputElement} */ (document.getElementById("dirIntensity"));
-        const lightDirIntensityText = /** @type {HTMLElement} */ (document.getElementById("dirIntensityText"));
-        const lightDirRotateSpeedSlider = /** @type {HTMLInputElement} */ (document.getElementById("dirRotateSpeed"));
-        const lightDirRotateSpeedText = /** @type {HTMLElement} */ (document.getElementById("dirRotateSpeedText"));
+        const lightDirIntensitySlider = (document.getElementById("dirIntensity"));
+        const lightDirIntensityText = (document.getElementById("dirIntensityText"));
+        const lightDirRotateSpeedSlider = (document.getElementById("dirRotateSpeed"));
+        const lightDirRotateSpeedText = (document.getElementById("dirRotateSpeedText"));
         let dirLightDefaultDir = new Vector3(-1, -1, -1);
         let dirLight = new DirectionalLight(dirLightDefaultDir, parseFloat(lightDirIntensitySlider.value));
         let dirLightRotation = Quaternion.buildQuaternionEuler(Vector3.zero);
         let dirLightRotateSpeed = parseFloat(lightDirRotateSpeedSlider.value);
 
-        const pointLightIntensitySlider = /** @type {HTMLInputElement} */ (document.getElementById("pointIntensity"));
-        const pointLightIntensityText = /** @type {HTMLElement} */ (document.getElementById("pointIntensityText"));
+        const pointLightIntensitySlider = (document.getElementById("pointIntensity"));
+        const pointLightIntensityText = (document.getElementById("pointIntensityText"));
         let pointLightIntensity = parseFloat(pointLightIntensitySlider.value);
-        let pointLightRange = 14;
+        const pointLightRangeSlider = (document.getElementById("pointRange"));
+        const pointLightRangeText = (document.getElementById("pointRangeText"));
+        let pointLightRange = parseFloat(pointLightRangeSlider.value);
 
-        const shadowCheckbox = /** @type {HTMLInputElement} */ (document.getElementById("useShadow"));
+        const shadowCheckbox = (document.getElementById("useShadow"));
         let useShadow = true;
 
         let brickTexture = new Texture(
@@ -1918,9 +1697,7 @@
             dirLight.dir = dirLightRotation.rotateVector(dirLightDefaultDir);
         }
 
-        /** @returns {Triangle[]} */
         function gameObjectToWorldSpaceTriangles() {
-            /** @type {Triangle[]} */
             let objectTris = [];
             objectTris.push(...ground.getTransformedTriangles());
             for (let light of pointLights) {
@@ -1931,14 +1708,9 @@
             return objectTris;
         }
 
-        /**
-         * @param {Triangle[]} objectTris
-         * @returns {Triangle[]}
-         */
-        function objectSpaceToViewSpace(objectTris) {
+        function worldSpaceToViewSpace(objectTris) {
             const viewMat = camera.getViewMatrix();
 
-            /** @type {Triangle[]} */
             let visibleTris = [];
             for (let tri of objectTris) {
                 if (Vector3.dot(tri.getNormal(), Vector3.sub(tri.getCenter(), camera.pos)) < 0) {
@@ -1950,7 +1722,11 @@
             return visibleTris;
         }
 
-        /** @param {Triangle[]} visibleTris */
+        function sortNearestFirst(visibleTris) {
+            visibleTris.sort((a, b) => 
+                (a.vertices[0].z + a.vertices[1].z + a.vertices[2].z) / 3 - (b.vertices[0].z + b.vertices[1].z + b.vertices[2].z) / 3);
+        }
+
         function viewSpaceToClipSpace(visibleTris) {
             for (let tri of visibleTris) {
                 tri.mulMat4x4(projectionMatrix);
@@ -1958,14 +1734,12 @@
             }
         }
 
-        /** @param {Triangle[]} visibleTris */
         function rasterize(visibleTris) {
             rasterizer.clearScreen();
             rasterizer.rasterizeClipSpaceTriangles(visibleTris, dirLight, pointLightIntensity, pointLights, pointLightRange, useShadow);
             rasterizer.drawCall(useASCII);
         }
 
-        /** @param {number} [time] */
         function update(time = performance.now()) {
             dt = (time - lastTime) / 1000;
             lastTime = time;
@@ -1986,7 +1760,8 @@
                 dirLight.buildShadowMap(objectTris);
             }
 
-            let visibleTris = objectSpaceToViewSpace(objectTris);
+            let visibleTris = worldSpaceToViewSpace(objectTris);
+            sortNearestFirst(visibleTris);
             viewSpaceToClipSpace(visibleTris);
             rasterize(visibleTris);
 
@@ -2010,18 +1785,15 @@
             pointLightIntensityText.textContent = pointLightIntensity.toFixed(2);
         });
 
+        pointLightRangeSlider.addEventListener("input", () => {
+            pointLightRange = parseFloat(pointLightRangeSlider.value);
+            pointLightRangeText.textContent = pointLightRange.toFixed(0);
+        });
+
         shadowCheckbox.addEventListener("change", () => {
             useShadow = shadowCheckbox.checked;
         });
 
-        /**
-         *
-         * @param {HTMLInputElement} input
-         * @param {Number} min
-         * @param {Number} max
-         * @param {Number} current
-         * @returns
-         */
         function readResolution(input, min, max, current) {
             let value = parseInt(input.value);
             if (isNaN(value)) return current;
@@ -2109,11 +1881,10 @@
             mobileControlsButton.blur();
         });
 
-        /** @type {NodeListOf<HTMLButtonElement>} */
         const keyButtons = mobileControls.querySelectorAll("button[data-key]");
         keyButtons.forEach((button) => {
-            const key = /** @type {string} */ (button.getAttribute("data-key"));
-            button.addEventListener("pointerdown", (/** @type {PointerEvent}*/ e) => {
+            const key = (button.getAttribute("data-key"));
+            button.addEventListener("pointerdown", (e) => {
                 e.preventDefault();
                 keyStates[key] = true;
                 button.setPointerCapture(e.pointerId);
@@ -2125,7 +1896,6 @@
             button.addEventListener("pointercancel", release);
         });
 
-        /** @type {NodeListOf<HTMLButtonElement>} */
         const lookButtons = mobileControls.querySelectorAll("button[data-look]");
         lookButtons.forEach((button) => {
             if (!button.dataset.look) return;

@@ -28,9 +28,9 @@
                 <div>
                     <b>Move</b><br />
                     <div class="move-controls">
-                        <span></span>
+                        <button data-key=" ">Up</button>
                         <button data-key="w">W</button>
-                        <span></span>
+                        <button data-key="Shift">Down</button>
 
                         <button data-key="a">A</button>
                         <button data-key="s">S</button>
@@ -53,40 +53,59 @@
             </div>
         </div>
     </div>
-    <div>
-        ASCII:
-        <input type="checkbox" id="useASCII" />
-    </div>
-    <div id="canvasResRow">
-        Canvas resolution:
-        <input id="canvasResWidth" value="400" size="4" />
-        x
-        <input id="canvasResHeight" value="300" size="4" />
-    </div>
-    <div id="asciiResRow" style="display: none">
-        ASCII resolution:
-        <input id="asciiResWidth" value="260" size="4" />
-        x
-        <input id="asciiResHeight" value="195" size="4" />
-    </div>
-    <div>
-        Directional light intensity:
-        <input type="range" id="dirIntensity" min="0" max="5" step="0.1" value="1" />
-        <span id="dirIntensityText" class="slider-value">1.0</span>
-    </div>
-    <div>
-        Directional light rotate speed:
-        <input type="range" id="dirRotateSpeed" min="0" max="50" step="0.1" value="10" />
-        <span id="dirRotateSpeedText" class="slider-value">10</span>
-    </div>
-    <div>
-        Point light intensity:
-        <input type="range" id="pointIntensity" min="0" max="5" step="0.1" value="1" />
-        <span id="pointIntensityText" class="slider-value">1.0</span>
-    </div>
-    <div>
-        Shadow:
-        <input type="checkbox" id="useShadow" checked="checked" />
+    <div id="controls">
+        <div class="controlRow">
+            <label class="controlLabel" for="useASCII">ASCII:</label>
+            <span><input type="checkbox" id="useASCII" /></span>
+        </div>
+        <div class="controlRow" id="canvasResRow">
+            <label class="controlLabel" for="canvasResWidth">Canvas resolution:</label>
+            <span>
+                <input id="canvasResWidth" value="400" size="4" />
+                x
+                <input id="canvasResHeight" value="300" size="4" />
+            </span>
+        </div>
+        <div class="controlRow" id="asciiResRow" style="display: none">
+            <label class="controlLabel" for="asciiResWidth">ASCII resolution:</label>
+            <span>
+                <input id="asciiResWidth" value="260" size="4" />
+                x
+                <input id="asciiResHeight" value="195" size="4" />
+            </span>
+        </div>
+        <div class="controlRow">
+            <label class="controlLabel" for="dirIntensity">Directional light intensity:</label>
+            <span>
+                <input type="range" id="dirIntensity" min="0" max="5" step="0.1" value="1" />
+                <span id="dirIntensityText" class="slider-value">1.0</span>
+            </span>
+        </div>
+        <div class="controlRow">
+            <label class="controlLabel" for="dirRotateSpeed">Directional light rotate speed:</label>
+            <span>
+                <input type="range" id="dirRotateSpeed" min="0" max="50" step="0.1" value="10" />
+                <span id="dirRotateSpeedText" class="slider-value">10</span>
+            </span>
+        </div>
+        <div class="controlRow">
+            <label class="controlLabel" for="pointIntensity">Point light intensity:</label>
+            <span>
+                <input type="range" id="pointIntensity" min="0" max="5" step="0.1" value="1" />
+                <span id="pointIntensityText" class="slider-value">1.0</span>
+            </span>
+        </div>
+        <div class="controlRow">
+            <label class="controlLabel" for="pointRange">Point light range:</label>
+            <span>
+                <input type="range" id="pointRange" min="0" max="60" step="1" value="14" />
+                <span id="pointRangeText" class="slider-value">14</span>
+            </span>
+        </div>
+        <div class="controlRow">
+            <label class="controlLabel" for="useShadow">Shadow:</label>
+            <span><input type="checkbox" id="useShadow" checked="checked" /></span>
+        </div>
     </div>
 
     <script src="index.js" type="module"></script>
