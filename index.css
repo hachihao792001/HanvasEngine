@@ -3,6 +3,10 @@
     height: auto;
 }
 
+#fps{
+    margin: 3px;
+}
+
 .slider-value {
     display: inline-block;
     min-width: 3em;
@@ -100,6 +104,28 @@ input[type="range"] {
     display: grid;
     grid-template-columns: repeat(3, auto);
     gap: 2px;
+}
+
+#mobileControls .tap-controls {
+    display: grid;
+    grid-template-columns: auto;
+    gap: 2px;
+}
+
+#mobileControls .tap-controls button,
+#mobileControls .portal-button {
+    width: auto;
+    min-width: 40px;
+    padding: 0px;
+}
+
+#mobileControls .portal-button.orange {
+    background: #ffc95e;
+}
+
+#mobileControls .portal-button.blue {
+    background: #119bff;
+    color: #fff;
 }
 
 #mobileControls button {

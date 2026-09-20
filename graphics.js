@@ -27,8 +27,8 @@ export class Color {
 }
 
 export class Texture {
-    /** @param {string} url */
-    constructor(url) {
+    /** @param {string} [url] */
+    constructor(url = "") {
         /** @type {Uint8ClampedArray | null} */
         this.pixels = null;
         this.width = 0;

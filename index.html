@@ -4,13 +4,14 @@
 <head>
     <meta charset="UTF-8" />
     <link rel="stylesheet" href="./index.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>3D Engine</title>
 </head>
 
 <body style="text-align: center; background: #f0f0f0">
     <h1>3D Engine</h1>
     <div id="render">
-        <canvas id="gameCanvas" width="400" height="300" style="border: 2px solid #aaa; background: #fff"></canvas>
+        <canvas id="gameCanvas" width="800" height="600" style="border: 2px solid #aaa; background: #fff"></canvas>
         <p id="asciiParagraph"
             style="display:none; font-size: 2px; font-family: 'Courier New', Courier, monospace;letter-spacing: 1px; line-height: 2px; white-space: pre;">
         </p>
@@ -21,7 +22,7 @@
     <h2 id="fps">FPS: 0</h2>
     <div>
         <button id="helpButton"
-            style="font-family: inherit;font-size: 15px;height: 30px;padding: 0 16px;margin-top: 0px">Help</button>
+            style="font-family: inherit;font-size: 15px;height: 30px;padding: 0 16px;margin-top: 0px">Help and credits</button>
         <button id="mobileControlsButton"
             style="font-family: inherit;font-size: 15px;height: 30px;padding: 0 16px;margin-top: 0px">Mobile
             controls</button>
@@ -41,11 +42,19 @@
                 </div>
 
                 <div>
-                    <b>Look</b><br />
+                    <b>Companion cube</b><br />
+                    <div class="tap-controls">
+                        <button data-tap="e">Pick / throw</button>
+                        <button data-tap="f">Drop / reset</button>
+                    </div>
+                </div>
+
+                <div>
+                    <b>Look and shoot</b><br />
                     <div class="look-controls">
-                        <span></span>
+                        <button class="portal-button orange" data-portal="0">Orange</button>
                         <button data-look="0,-1">&uarr;</button>
-                        <span></span>
+                        <button class="portal-button blue" data-portal="1">Blue</button>
 
                         <button data-look="-1,0">&larr;</button>
                         <button data-look="0,1">&darr;</button>
@@ -63,9 +72,9 @@
         <div class="controlRow" id="canvasResRow">
             <label class="controlLabel" for="canvasResWidth">Canvas resolution:</label>
             <span>
-                <input id="canvasResWidth" value="400" size="4" />
+                <input id="canvasResWidth" value="800" size="4" />
                 x
-                <input id="canvasResHeight" value="300" size="4" />
+                <input id="canvasResHeight" value="600" size="4" />
             </span>
         </div>
         <div class="controlRow" id="asciiResRow" style="display: none">
@@ -79,15 +88,8 @@
         <div class="controlRow">
             <label class="controlLabel" for="dirIntensity">Directional light intensity:</label>
             <span>
-                <input type="range" id="dirIntensity" min="0" max="5" step="0.1" value="1" />
-                <span id="dirIntensityText" class="slider-value">1.0</span>
-            </span>
-        </div>
-        <div class="controlRow">
-            <label class="controlLabel" for="dirRotateSpeed">Directional light rotate speed:</label>
-            <span>
-                <input type="range" id="dirRotateSpeed" min="0" max="50" step="0.1" value="10" />
-                <span id="dirRotateSpeedText" class="slider-value">10</span>
+                <input type="range" id="dirIntensity" min="0" max="5" step="0.1" value="0.5" />
+                <span id="dirIntensityText" class="slider-value">0.5</span>
             </span>
         </div>
         <div class="controlRow">
@@ -100,17 +102,17 @@
         <div class="controlRow">
             <label class="controlLabel" for="pointRange">Point light range:</label>
             <span>
-                <input type="range" id="pointRange" min="0" max="60" step="1" value="14" />
-                <span id="pointRangeText" class="slider-value">14</span>
+                <input type="range" id="pointRange" min="0" max="60" step="1" value="20" />
+                <span id="pointRangeText" class="slider-value">20</span>
             </span>
         </div>
         <div class="controlRow">
-            <label class="controlLabel" for="useShadow">Shadow:</label>
-            <span><input type="checkbox" id="useShadow" checked="checked" /></span>
+            <label class="controlLabel" for="portalLimit">Portal recursion limit:</label>
+            <span><input id="portalLimit" value="10" size="4" /></span>
         </div>
         <div class="controlRow">
             <span class="controlLabel">Controlling object:</span>
-            <span id="controllingObject">Point light 1</span>
+            <span id="controllingObject">Orange portal</span>
         </div>
     </div>
 
@@ -123,18 +125,25 @@
         <ul>
             <li>W, A, S, D to move</li>
             <li>Space, shift to fly up and down</li>
-            <li>Mouse to look around</li>
+            <li>Mouse to look around, left / right click to shoot the orange / blue portal</li>
             <li style="margin-top: 15px;">P to change controlling object</li>
             <li>I, K, J, L to move controlling object</li>
             <li>U, O to move controlling object up and down</li>
             <li>B, N, M to rotate controlling object around the X, Y, Z world axis</li>
-            <li style="margin-top: 15px;">When the crosshair is on a holdable object, E to hold it</li>
-            <li>When holding an object, E again to let it go</li>
+            <li style="margin-top: 15px;">When looking at companion cube, E to pick it up</li>
+            <li>When holding the companion cube, E again to throw it</li>
+            <li>When holding the companion cube, F to let go of it</li>
+            <li>When not holding the companion cube, F to teleport it in front of you</li>
+            <li>G to toggle gravity for the companion cube</li>
         </ul>
-        Touch controls:
-        <ul>
-            <li>Mobile controls to move and look around</li>
-        </ul>
+        <p>
+            Wall and floor texture: <a
+                href="https://sketchfab.com/3d-models/test-chamber-03-04-b51d1910a6324b659b2e15de5727c161">sketchfab</a><br />
+            Companion cube texture: <a
+                href="https://www.deviantart.com/bulbablaaah/art/Companion-Cube-Face-214302563">deviantart</a><br />
+            Wheatly cube texture: <a
+                href="https://www.supercoloring.com/media/paper-craft/603552/wheatley-paper-toy">supercoloring</a>
+        </p>
     </div>
 
     <script src="index.js" type="module"></script>

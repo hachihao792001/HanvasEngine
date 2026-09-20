@@ -2,13 +2,16 @@ import { MathExtend, MathTriangle, Vector2, Vector3, Plane } from "./math.js";
 import { Color, Texture } from "./graphics.js";
 import { GameObject } from "./engine.js";
 
+/** @typedef {import("./portal.js").Portal} Portal */
+
 export class Triangle extends MathTriangle {
     /**
      * @param {Vector3[]} [vertices]
      * @param {Vector2[]} [uv]
      * @param {Color} [color]
+     * @param {Portal | null} [portal]
      */
-    constructor(vertices = [], uv = [], color = new Color(255, 255, 255)) {
+    constructor(vertices = [], uv = [], color = new Color(255, 255, 255), portal = null) {
         super(vertices);
 
         this.uv = uv;
@@ -18,6 +21,8 @@ export class Triangle extends MathTriangle {
         this.texture = null;
         /** @type {GameObject | null} */
         this.gameObject = null;
+        /** @type {Portal | null} */
+        this.portal = portal;
     }
 
     clone() {
@@ -30,6 +35,7 @@ export class Triangle extends MathTriangle {
         tri.color = this.color;
         tri.texture = this.texture;
         tri.gameObject = this.gameObject;
+        tri.portal = this.portal;
         return tri;
     }
 
@@ -82,6 +88,7 @@ export class Triangle extends MathTriangle {
             outTri.color = this.color;
             outTri.texture = this.texture;
             outTri.gameObject = this.gameObject;
+            outTri.portal = this.portal;
             outTris.push(outTri);
         } else if (frontPoints.length == 2 && behindPoints.length == 1) {
             if (frontPoints[0] == 0 && frontPoints[1] == 2) {
@@ -109,6 +116,7 @@ export class Triangle extends MathTriangle {
             outTri1.color = this.color;
             outTri1.texture = this.texture;
             outTri1.gameObject = this.gameObject;
+            outTri1.portal = this.portal;
             outTris.push(outTri1);
 
             let outTri2 = new Triangle();
@@ -124,6 +132,7 @@ export class Triangle extends MathTriangle {
             outTri2.color = this.color;
             outTri2.texture = this.texture;
             outTri2.gameObject = this.gameObject;
+            outTri2.portal = this.portal;
             outTris.push(outTri2);
         }
 
@@ -217,6 +226,7 @@ export class Mesh {
                     [tri.vertices[0].clone(), tri.vertices[1].clone(), tri.vertices[2].clone()],
                     [tri.uv[0].clone(), tri.uv[1].clone(), tri.uv[2].clone()],
                     color,
+                    tri.portal,
                 ),
             );
         }
@@ -224,11 +234,14 @@ export class Mesh {
 }
 
 export class Quad extends Mesh {
-    constructor() {
-        super(Quad.generateInitialTriangles());
+    /** @param {Portal | null} [portal] */
+    constructor(portal = null) {
+        super(Quad.generateInitialTriangles(portal));
     }
 
-    static generateInitialTriangles() {
+    /** @param {Portal | null} [portal] */
+    static generateInitialTriangles(portal = null) {
+        /** @type {Triangle[]} */
         let tris = [];
         let color = new Color(255, 255, 255);
 
@@ -237,6 +250,7 @@ export class Quad extends Mesh {
                 [new Vector3(0.5, -0.5, 0), new Vector3(0.5, 0.5, 0), new Vector3(-0.5, 0.5, 0)],
                 [new Vector2(1, 0), new Vector2(1, 1), new Vector2(0, 1)],
                 color,
+                portal,
             ),
         );
 
@@ -245,6 +259,7 @@ export class Quad extends Mesh {
                 [new Vector3(0.5, -0.5, 0), new Vector3(-0.5, 0.5, 0), new Vector3(-0.5, -0.5, 0)],
                 [new Vector2(1, 0), new Vector2(0, 1), new Vector2(0, 0)],
                 color,
+                portal,
             ),
         );
 

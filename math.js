@@ -550,13 +550,15 @@ export class Plane {
     }
 
     /**
-     * @param {MathTriangle[]} tris
-     * @returns {MathTriangle[]}
+     * @template {MathTriangle} T
+     * @param {T[]} tris
+     * @returns {T[]}
      */
     clipWithTris(tris) {
+        /** @type {T[]} */
         let clippedTris = [];
         for (let tri of tris) {
-            clippedTris.push(...tri.clipAgainstPlane(this));
+            clippedTris.push(.../** @type {T[]} */ (tri.clipAgainstPlane(this)));
         }
         return clippedTris;
     }

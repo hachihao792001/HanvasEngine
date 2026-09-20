@@ -9,6 +9,10 @@
             height: auto;
         }
 
+        #fps{
+            margin: 3px;
+        }
+
         .slider-value {
             display: inline-block;
             min-width: 3em;
@@ -108,6 +112,28 @@
             gap: 2px;
         }
 
+        #mobileControls .tap-controls {
+            display: grid;
+            grid-template-columns: auto;
+            gap: 2px;
+        }
+
+        #mobileControls .tap-controls button,
+        #mobileControls .portal-button {
+            width: auto;
+            min-width: 40px;
+            padding: 0px;
+        }
+
+        #mobileControls .portal-button.orange {
+            background: #ffc95e;
+        }
+
+        #mobileControls .portal-button.blue {
+            background: #119bff;
+            color: #fff;
+        }
+
         #mobileControls button {
             width: 40px;
             height: 40px;
@@ -120,13 +146,14 @@
             user-select: none;
         }
     </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>3D Engine</title>
 </head>
 
 <body style="text-align: center; background: #f0f0f0">
     <h1>3D Engine</h1>
     <div id="render">
-        <canvas id="gameCanvas" width="400" height="300" style="border: 2px solid #aaa; background: #fff"></canvas>
+        <canvas id="gameCanvas" width="800" height="600" style="border: 2px solid #aaa; background: #fff"></canvas>
         <p id="asciiParagraph"
             style="display:none; font-size: 2px; font-family: 'Courier New', Courier, monospace;letter-spacing: 1px; line-height: 2px; white-space: pre;">
         </p>
@@ -137,7 +164,7 @@
     <h2 id="fps">FPS: 0</h2>
     <div>
         <button id="helpButton"
-            style="font-family: inherit;font-size: 15px;height: 30px;padding: 0 16px;margin-top: 0px">Help</button>
+            style="font-family: inherit;font-size: 15px;height: 30px;padding: 0 16px;margin-top: 0px">Help and credits</button>
         <button id="mobileControlsButton"
             style="font-family: inherit;font-size: 15px;height: 30px;padding: 0 16px;margin-top: 0px">Mobile
             controls</button>
@@ -157,11 +184,19 @@
                 </div>
 
                 <div>
-                    <b>Look</b><br />
+                    <b>Companion cube</b><br />
+                    <div class="tap-controls">
+                        <button data-tap="e">Pick / throw</button>
+                        <button data-tap="f">Drop / reset</button>
+                    </div>
+                </div>
+
+                <div>
+                    <b>Look and shoot</b><br />
                     <div class="look-controls">
-                        <span></span>
+                        <button class="portal-button orange" data-portal="0">Orange</button>
                         <button data-look="0,-1">&uarr;</button>
-                        <span></span>
+                        <button class="portal-button blue" data-portal="1">Blue</button>
 
                         <button data-look="-1,0">&larr;</button>
                         <button data-look="0,1">&darr;</button>
@@ -179,9 +214,9 @@
         <div class="controlRow" id="canvasResRow">
             <label class="controlLabel" for="canvasResWidth">Canvas resolution:</label>
             <span>
-                <input id="canvasResWidth" value="400" size="4" />
+                <input id="canvasResWidth" value="800" size="4" />
                 x
-                <input id="canvasResHeight" value="300" size="4" />
+                <input id="canvasResHeight" value="600" size="4" />
             </span>
         </div>
         <div class="controlRow" id="asciiResRow" style="display: none">
@@ -195,15 +230,8 @@
         <div class="controlRow">
             <label class="controlLabel" for="dirIntensity">Directional light intensity:</label>
             <span>
-                <input type="range" id="dirIntensity" min="0" max="5" step="0.1" value="1" />
-                <span id="dirIntensityText" class="slider-value">1.0</span>
-            </span>
-        </div>
-        <div class="controlRow">
-            <label class="controlLabel" for="dirRotateSpeed">Directional light rotate speed:</label>
-            <span>
-                <input type="range" id="dirRotateSpeed" min="0" max="50" step="0.1" value="10" />
-                <span id="dirRotateSpeedText" class="slider-value">10</span>
+                <input type="range" id="dirIntensity" min="0" max="5" step="0.1" value="0.5" />
+                <span id="dirIntensityText" class="slider-value">0.5</span>
             </span>
         </div>
         <div class="controlRow">
@@ -216,17 +244,17 @@
         <div class="controlRow">
             <label class="controlLabel" for="pointRange">Point light range:</label>
             <span>
-                <input type="range" id="pointRange" min="0" max="60" step="1" value="14" />
-                <span id="pointRangeText" class="slider-value">14</span>
+                <input type="range" id="pointRange" min="0" max="60" step="1" value="20" />
+                <span id="pointRangeText" class="slider-value">20</span>
             </span>
         </div>
         <div class="controlRow">
-            <label class="controlLabel" for="useShadow">Shadow:</label>
-            <span><input type="checkbox" id="useShadow" checked="checked" /></span>
+            <label class="controlLabel" for="portalLimit">Portal recursion limit:</label>
+            <span><input id="portalLimit" value="10" size="4" /></span>
         </div>
         <div class="controlRow">
             <span class="controlLabel">Controlling object:</span>
-            <span id="controllingObject">Point light 1</span>
+            <span id="controllingObject">Orange portal</span>
         </div>
     </div>
 
@@ -239,18 +267,25 @@
         <ul>
             <li>W, A, S, D to move</li>
             <li>Space, shift to fly up and down</li>
-            <li>Mouse to look around</li>
+            <li>Mouse to look around, left / right click to shoot the orange / blue portal</li>
             <li style="margin-top: 15px;">P to change controlling object</li>
             <li>I, K, J, L to move controlling object</li>
             <li>U, O to move controlling object up and down</li>
             <li>B, N, M to rotate controlling object around the X, Y, Z world axis</li>
-            <li style="margin-top: 15px;">When the crosshair is on a holdable object, E to hold it</li>
-            <li>When holding an object, E again to let it go</li>
+            <li style="margin-top: 15px;">When looking at companion cube, E to pick it up</li>
+            <li>When holding the companion cube, E again to throw it</li>
+            <li>When holding the companion cube, F to let go of it</li>
+            <li>When not holding the companion cube, F to teleport it in front of you</li>
+            <li>G to toggle gravity for the companion cube</li>
         </ul>
-        Touch controls:
-        <ul>
-            <li>Mobile controls to move and look around</li>
-        </ul>
+        <p>
+            Wall and floor texture: <a
+                href="https://sketchfab.com/3d-models/test-chamber-03-04-b51d1910a6324b659b2e15de5727c161">sketchfab</a><br />
+            Companion cube texture: <a
+                href="https://www.deviantart.com/bulbablaaah/art/Companion-Cube-Face-214302563">deviantart</a><br />
+            Wheatly cube texture: <a
+                href="https://www.supercoloring.com/media/paper-craft/603552/wheatley-paper-toy">supercoloring</a>
+        </p>
     </div>
 
     <script>
@@ -620,7 +655,7 @@
             clipWithTris(tris) {
                 let clippedTris = [];
                 for (let tri of tris) {
-                    clippedTris.push(...tri.clipAgainstPlane(this));
+                    clippedTris.push(...(tri.clipAgainstPlane(this)));
                 }
                 return clippedTris;
             }
@@ -819,7 +854,7 @@
         }
 
         class Texture {
-            constructor(url) {
+            constructor(url = "") {
                 this.pixels = null;
                 this.width = 0;
                 this.height = 0;
@@ -850,9 +885,8 @@
         // ===== engine.js =====
         let maxActiveLights = 16;
         let ambientLight = 0.2;
-        let shadowMapSize = 512;
-        let shadowBias = 0.01;
-        let shadowMapDistance = 20;
+        let gravity = 9.8;
+        let terminalVelocity = 50;
 
         class Camera {
             constructor(pos, euler, speed, sensitivity) {
@@ -860,15 +894,11 @@
                 this.rotation = Quaternion.buildQuaternionEuler(euler);
                 this.speed = speed;
                 this.sensitivity = sensitivity;
-            }
 
-            getFrustumCenter(zNear, zFar, customZFar = -1) {
-                let forward = this.getForward();
-
-                let near = Vector3.add(this.pos, Vector3.mul(forward, zNear));
-                if (customZFar == -1) customZFar = zFar;
-                let far = Vector3.add(this.pos, Vector3.mul(forward, customZFar));
-                return Vector3.div(Vector3.add(near, far), 2);
+                this.rotLerpStart = this.rotation;
+                this.rotLerpEnd = this.rotation;
+                this.rotLerpDuration = 0.2;
+                this.rotLerpCount = 0;
             }
 
             updateRotation(mouseMovementX, mouseMovementY) {
@@ -913,6 +943,33 @@
             getViewMatrix() {
                 return Mat4x4.ViewFromPosRot(this.pos, this.rotation);
             }
+
+            updateTransformAndCorrectRoll(newPos, newRot) {
+                this.pos = newPos;
+                this.rotation = newRot;
+
+                let newForward = newRot.rotateVector(Vector3.forward).normalize();
+                if (Math.abs(Vector3.dot(newForward, Vector3.up)) > 0.999) return;
+
+                let correctRotation = Quaternion.lookRotation(newForward, Vector3.up);
+                if (!Quaternion.isClose(newRot, correctRotation, 0.001)) {
+                    this.rotLerpStart = newRot;
+                    this.rotLerpEnd = correctRotation;
+                    this.rotLerpCount = this.rotLerpDuration;
+                }
+            }
+
+            isCorrectingRoll() {
+                return this.rotLerpCount > 0;
+            }
+
+            updateRollCorrection(dt) {
+                if (this.rotLerpCount <= 0) return;
+
+                this.rotation = Quaternion.lerp(this.rotLerpStart, this.rotLerpEnd, (this.rotLerpDuration - this.rotLerpCount) / this.rotLerpDuration);
+                this.rotLerpCount -= dt;
+                if (this.rotLerpCount <= 0) this.rotation = this.rotLerpEnd;
+            }
         }
 
         class GameObject {
@@ -928,6 +985,8 @@
                 this.mesh = mesh;
                 this.texture = texture;
                 this.isHoldable = false;
+                this.velocity = Vector3.zero.clone();
+                this.useGravity = false;
             }
 
             rotate(eulerX, eulerY, eulerZ) {
@@ -948,10 +1007,21 @@
                     transformedTri.mulMat4x4(Mat4x4.Translation(this.pos.x, this.pos.y, this.pos.z));
                     transformedTri.updateWorldVertices();
                     transformedTri.texture = this.texture;
+                    transformedTri.color = this.color;
                     transformedTri.gameObject = this;
                     transformedTris.push(transformedTri);
                 }
                 return transformedTris;
+            }
+
+            updatePhysics(dt) {
+                if (this.useGravity) {
+                    this.velocity = Vector3.add(this.velocity, Vector3.mul(Vector3.down, gravity * dt));
+                    if (this.velocity.magnitude() >= terminalVelocity) {
+                        this.velocity = Vector3.mul(this.velocity.normalize(), terminalVelocity);
+                    }
+                }
+                this.pos = Vector3.add(this.pos, Vector3.mul(this.velocity, dt));
             }
         }
 
@@ -959,107 +1029,11 @@
             constructor(dir, intensity) {
                 this.dir = dir.normalize();
                 this.intensity = intensity;
-                this.viewMatrix = new Mat4x4();
-                this.projectionMatrix = new Mat4x4();
-                this.shadowMap = [];
-                for (let i = 0; i < shadowMapSize; i++) {
-                    let row = [];
-                    for (let j = 0; j < shadowMapSize; j++) {
-                        row.push(Infinity);
-                    }
-                    this.shadowMap.push(row);
-                }
-            }
-
-            buildViewAndProjectionMatrix() {
-                let up = Math.abs(Vector3.dot(this.dir, Vector3.up)) < 0.99 ? Vector3.up : Vector3.forward;
-                let right = Vector3.cross(up, this.dir).normalize();
-                up = Vector3.cross(this.dir, right).normalize();
-                //let frustumCenter = camera.getFrustumCenter(znear, zfar, shadowMapDistance);
-                let frustumCenter = Vector3.zero;
-                let lightPos = Vector3.sub(frustumCenter, Vector3.mul(this.dir, shadowMapDistance));
-                this.viewMatrix = Mat4x4.View(right, up, this.dir, lightPos);
-                this.projectionMatrix = Mat4x4.Orthographic(shadowMapDistance, 0.1, shadowMapDistance);
-            }
-
-            buildShadowMap(tris) {
-                for (let i = 0; i < shadowMapSize; i++) {
-                    for (let j = 0; j < shadowMapSize; j++) {
-                        this.shadowMap[i][j] = Infinity;
-                    }
-                }
-
-                for (let tri of tris) {
-                    let shadowTri = tri.clone();
-
-                    if (Vector3.dot(tri.getWorldNormal(), this.dir) >= 0) continue;
-
-                    shadowTri.mulMat4x4(this.viewMatrix);
-                    shadowTri.mulMat4x4(this.projectionMatrix);
-                    shadowTri.perspectiveDivide();
-
-                    for (let i = 0; i < shadowTri.vertices.length; i++) {
-                        shadowTri.vertices[i].x = ((shadowTri.vertices[i].x + 1) * shadowMapSize) / 2;
-                        shadowTri.vertices[i].y = ((-shadowTri.vertices[i].y + 1) * shadowMapSize) / 2;
-                    }
-
-                    const bbox = shadowTri.boundingBox(shadowMapSize, shadowMapSize);
-
-                    shadowTri.calculateSignedDoubleArea();
-
-                    let edgeFunctionRow01 = MathExtend.edgeFunction(shadowTri.vertices[0], shadowTri.vertices[1], new Vector3(bbox.minX, bbox.minY, 0));
-                    let edgeFunctionRow12 = MathExtend.edgeFunction(shadowTri.vertices[1], shadowTri.vertices[2], new Vector3(bbox.minX, bbox.minY, 0));
-                    let edgeFunctionRow20 = MathExtend.edgeFunction(shadowTri.vertices[2], shadowTri.vertices[0], new Vector3(bbox.minX, bbox.minY, 0));
-
-                    for (let y = bbox.minY; y <= bbox.maxY; y++) {
-                        let edgeFunction01 = edgeFunctionRow01;
-                        let edgeFunction12 = edgeFunctionRow12;
-                        let edgeFunction20 = edgeFunctionRow20;
-                        for (let x = bbox.minX; x <= bbox.maxX; x++) {
-                            if (edgeFunction01 > 0 && edgeFunction12 > 0 && edgeFunction20 > 0) {
-                                const baryCoord0 = edgeFunction12 / shadowTri.signedDoubleArea;
-                                const baryCoord1 = edgeFunction20 / shadowTri.signedDoubleArea;
-                                const baryCoord2 = edgeFunction01 / shadowTri.signedDoubleArea;
-                                const z = shadowTri.vertices[0].z * baryCoord0 + shadowTri.vertices[1].z * baryCoord1 + shadowTri.vertices[2].z * baryCoord2;
-                                if (z < this.shadowMap[y][x]) {
-                                    this.shadowMap[y][x] = z;
-                                }
-                            }
-                            edgeFunction01 += shadowTri.vertices[0].y - shadowTri.vertices[1].y;
-                            edgeFunction12 += shadowTri.vertices[1].y - shadowTri.vertices[2].y;
-                            edgeFunction20 += shadowTri.vertices[2].y - shadowTri.vertices[0].y;
-                        }
-                        edgeFunctionRow01 += shadowTri.vertices[1].x - shadowTri.vertices[0].x;
-                        edgeFunctionRow12 += shadowTri.vertices[2].x - shadowTri.vertices[1].x;
-                        edgeFunctionRow20 += shadowTri.vertices[0].x - shadowTri.vertices[2].x;
-                    }
-                }
-            }
-
-            isInShadow(pixelWorldPos, triWorldNormal) {
-                let dotProduct = Vector3.dot(triWorldNormal, this.dir);
-                if (dotProduct >= 0) return false;
-
-                let texelSize = shadowMapDistance / shadowMapSize;
-                let normalOffset = texelSize * (1 - Math.abs(dotProduct));
-
-                let lightSpacePos = Vector3.add(pixelWorldPos, Vector3.mul(triWorldNormal, normalOffset));
-                lightSpacePos.mulMat4x4(this.viewMatrix);
-                lightSpacePos.mulMat4x4(this.projectionMatrix);
-
-                lightSpacePos = Vector3.div(lightSpacePos, lightSpacePos.w);
-
-                const x = Math.floor(((lightSpacePos.x + 1) * shadowMapSize) / 2);
-                const y = Math.floor(((-lightSpacePos.y + 1) * shadowMapSize) / 2);
-
-                if (x < 0 || x >= shadowMapSize || y < 0 || y >= shadowMapSize) return false;
-
-                return lightSpacePos.z > this.shadowMap[y][x] + shadowBias;
             }
         }
 
         class Rasterizer {
-            constructor(canvasWidth, canvasHeight, ctx, asciiParagraph) {
+            constructor(canvasWidth, canvasHeight, ctx, asciiParagraph = null) {
                 this.canvasWidth = canvasWidth;
                 this.canvasHeight = canvasHeight;
                 this.ctx = ctx;
@@ -1075,6 +1049,8 @@
                 this.screenCenterX = Math.floor(this.canvasWidth / 2);
                 this.screenCenterY = Math.floor(this.canvasHeight / 2);
                 this.pointingTri = null;
+                this.pointingPos = new Vector3(0, 0, 0);
+                this.pointingPosNormal = new Vector3(0, 0, 0);
 
                 this.activeLights = new Array(maxActiveLights);
             }
@@ -1094,12 +1070,28 @@
                 this.screenCenterY = Math.floor(this.canvasHeight / 2);
             }
 
-            clearScreen() {
-                this.screenBuffer.fill(244);
-                this.depthBuffer.fill(Infinity);
+            clearScreen(bbox = null) {
+                if (bbox == null) {
+                    this.screenBuffer.fill(244);
+                    this.depthBuffer.fill(Infinity);
+                    return;
+                }
+
+                for (let y = bbox.minY; y <= bbox.maxY; y++) {
+                    let pixelIndex = y * this.canvasWidth + bbox.minX;
+                    let colorIndex = pixelIndex * 4;
+                    for (let x = bbox.minX; x <= bbox.maxX; x++) {
+                        this.screenBuffer[colorIndex] = 244;
+                        this.screenBuffer[colorIndex + 1] = 244;
+                        this.screenBuffer[colorIndex + 2] = 244;
+                        this.depthBuffer[pixelIndex] = Infinity;
+                        pixelIndex++;
+                        colorIndex += 4;
+                    }
+                }
             }
 
-            rasterizeClipSpaceTriangles(tris, dirLight, pointLightIntensity, pointLights, pointLightRange, useShadow) {
+            rasterizeClipSpaceTriangles(tris, dirLight, pointLightIntensity, pointLights, pointLightRange, renderBBox = null) {
                 const screenBuffer = this.screenBuffer;
                 const depthBuffer = this.depthBuffer;
                 const canvasWidth = this.canvasWidth;
@@ -1132,13 +1124,16 @@
                     const dirLightDiffuse = (1 - (Vector3.dot(triWorldNormal, dirLight.dir) + 1) / 2) * dirLight.intensity;
                     const activeLightCount = pointLightIntensity > 0 ? tri.getPointLightsThatCanAffectTri(pointLightRange, pointLights, activeLights) : 0;
 
-                    const bbox = tri.boundingBox(canvasWidth, canvasHeight);
+                    let bbox = tri.boundingBox(canvasWidth, canvasHeight);
+                    if (renderBBox != null) {
+                        bbox = BoundingBox.intersect(renderBBox, bbox);
+                        if (!bbox.isValid()) continue;
+                    }
 
                     let edgeFunctionRow01 = MathExtend.edgeFunction(tri.vertices[0], tri.vertices[1], new Vector3(bbox.minX, bbox.minY, 0));
                     let edgeFunctionRow12 = MathExtend.edgeFunction(tri.vertices[1], tri.vertices[2], new Vector3(bbox.minX, bbox.minY, 0));
                     let edgeFunctionRow20 = MathExtend.edgeFunction(tri.vertices[2], tri.vertices[0], new Vector3(bbox.minX, bbox.minY, 0));
 
-                    // everything the per pixel loop needs, read once instead of once per pixel
                     const vertex0 = tri.vertices[0],
                         vertex1 = tri.vertices[1],
                         vertex2 = tri.vertices[2];
@@ -1180,6 +1175,7 @@
                         perspectiveWorld2Z = world2.z * uv2W;
 
                     const triColor = tri.color;
+                    const triPortal = tri.portal;
                     const texture = tri.texture;
                     const texturePixels = texture ? texture.pixels : null;
                     const textureWidth = texture ? texture.width : 0,
@@ -1211,11 +1207,8 @@
 
                                     if (x == screenCenterX && y == screenCenterY) {
                                         this.pointingTri = tri;
-                                    }
-
-                                    let shadowFactor = 1.0;
-                                    if (useShadow && dirLight.isInShadow(new Vector3(pixelWorldX, pixelWorldY, pixelWorldZ), triWorldNormal)) {
-                                        shadowFactor = 0.5;
+                                        this.pointingPos = new Vector3(pixelWorldX, pixelWorldY, pixelWorldZ);
+                                        this.pointingPosNormal = triWorldNormal;
                                     }
 
                                     let totalPointLightDiffuse = 0;
@@ -1240,17 +1233,23 @@
                                         totalPointLightDiffuse *= pointLightIntensity;
                                     }
 
-                                    const lightIntensity = Math.max(ambientLight, (dirLightDiffuse + totalPointLightDiffuse) * shadowFactor);
+                                    let lightIntensity = Math.max(ambientLight, dirLightDiffuse + totalPointLightDiffuse);
 
                                     let texR = triColor.r,
                                         texG = triColor.g,
                                         texB = triColor.b;
                                     if (texturePixels) {
-                                        const pixelU = (uv0U * baryCoord0 + uv1U * baryCoord1 + uv2U * baryCoord2) / pixelInvZ;
-                                        const pixelV = (uv0V * baryCoord0 + uv1V * baryCoord1 + uv2V * baryCoord2) / pixelInvZ;
-                                        const texX = Math.floor(pixelU * (textureWidth - 1));
-                                        const texY = Math.floor(pixelV * (textureHeight - 1));
-                                        const texIndex = (texY * textureWidth + texX) * 4;
+                                        let texIndex;
+                                        if (triPortal) {
+                                            lightIntensity = 1;
+                                            texIndex = (y * textureWidth + x) * 4;
+                                        } else {
+                                            const pixelU = (uv0U * baryCoord0 + uv1U * baryCoord1 + uv2U * baryCoord2) / pixelInvZ;
+                                            const pixelV = (uv0V * baryCoord0 + uv1V * baryCoord1 + uv2V * baryCoord2) / pixelInvZ;
+                                            const texX = Math.floor(pixelU * (textureWidth - 1));
+                                            const texY = Math.floor(pixelV * (textureHeight - 1));
+                                            texIndex = (texY * textureWidth + texX) * 4;
+                                        }
                                         texR = texturePixels[texIndex];
                                         texG = texturePixels[texIndex + 1];
                                         texB = texturePixels[texIndex + 2];
@@ -1298,7 +1297,7 @@
 
         // ===== mesh.js =====
         class Triangle extends MathTriangle {
-            constructor(vertices = [], uv = [], color = new Color(255, 255, 255)) {
+            constructor(vertices = [], uv = [], color = new Color(255, 255, 255), portal = null) {
                 super(vertices);
 
                 this.uv = uv;
@@ -1306,6 +1305,7 @@
                 this.color = color;
                 this.texture = null;
                 this.gameObject = null;
+                this.portal = portal;
             }
 
             clone() {
@@ -1318,6 +1318,7 @@
                 tri.color = this.color;
                 tri.texture = this.texture;
                 tri.gameObject = this.gameObject;
+                tri.portal = this.portal;
                 return tri;
             }
 
@@ -1363,6 +1364,7 @@
                     outTri.color = this.color;
                     outTri.texture = this.texture;
                     outTri.gameObject = this.gameObject;
+                    outTri.portal = this.portal;
                     outTris.push(outTri);
                 } else if (frontPoints.length == 2 && behindPoints.length == 1) {
                     if (frontPoints[0] == 0 && frontPoints[1] == 2) {
@@ -1390,6 +1392,7 @@
                     outTri1.color = this.color;
                     outTri1.texture = this.texture;
                     outTri1.gameObject = this.gameObject;
+                    outTri1.portal = this.portal;
                     outTris.push(outTri1);
 
                     let outTri2 = new Triangle();
@@ -1405,6 +1408,7 @@
                     outTri2.color = this.color;
                     outTri2.texture = this.texture;
                     outTri2.gameObject = this.gameObject;
+                    outTri2.portal = this.portal;
                     outTris.push(outTri2);
                 }
 
@@ -1486,6 +1490,7 @@
                             [tri.vertices[0].clone(), tri.vertices[1].clone(), tri.vertices[2].clone()],
                             [tri.uv[0].clone(), tri.uv[1].clone(), tri.uv[2].clone()],
                             color,
+                            tri.portal,
                         ),
                     );
                 }
@@ -1493,11 +1498,11 @@
         }
 
         class Quad extends Mesh {
-            constructor() {
-                super(Quad.generateInitialTriangles());
+            constructor(portal = null) {
+                super(Quad.generateInitialTriangles(portal));
             }
 
-            static generateInitialTriangles() {
+            static generateInitialTriangles(portal = null) {
                 let tris = [];
                 let color = new Color(255, 255, 255);
 
@@ -1506,6 +1511,7 @@
                         [new Vector3(0.5, -0.5, 0), new Vector3(0.5, 0.5, 0), new Vector3(-0.5, 0.5, 0)],
                         [new Vector2(1, 0), new Vector2(1, 1), new Vector2(0, 1)],
                         color,
+                        portal,
                     ),
                 );
 
@@ -1514,6 +1520,7 @@
                         [new Vector3(0.5, -0.5, 0), new Vector3(-0.5, 0.5, 0), new Vector3(-0.5, -0.5, 0)],
                         [new Vector2(1, 0), new Vector2(0, 1), new Vector2(0, 0)],
                         color,
+                        portal,
                     ),
                 );
 
@@ -1685,6 +1692,334 @@
             }
         }
 
+        // ===== portal.js =====
+        const portalEdgeCubeMesh = new Cube();
+        const portalBackQuadMesh = new Quad();
+
+        class Portal {
+            static edgeThickness = 0.1;
+
+            constructor(name, pos, eulerAngles, scale, color, canvasWidth, canvasHeight, ctx) {
+                this.name = name;
+                this.pos = pos;
+                this.rotation = Quaternion.buildQuaternionEuler(eulerAngles);
+                this.scale = scale;
+
+                this.renderTexture = new Texture();
+                this.rasterizer = new Rasterizer(canvasWidth, canvasHeight, ctx);
+                this.resize(canvasWidth, canvasHeight);
+
+                this.quad = new GameObject(pos, eulerAngles, scale, color, new Quad(this), null, name);
+                this.camera = new Camera(pos, eulerAngles, 8, 0.2);
+
+                this.otherPortal = this;
+
+                this.lastFramePlayerInFrontOfPortal = false;
+                this.lastFrameGameObjectInFrontOfPortal = new Map();
+
+                const edgeThickness = Portal.edgeThickness;
+                let portalBack = this.rotation.rotateVector(Vector3.back).normalize();
+                let backOffset = Vector3.mul(portalBack, edgeThickness / 2);
+                let portalUp = this.rotation.rotateVector(Vector3.up);
+                let portalRight = this.rotation.rotateVector(Vector3.right);
+
+                this.topCube = new GameObject(
+                    Vector3.add(pos, Vector3.add(Vector3.mul(portalUp, scale.y / 2 + edgeThickness / 2), backOffset)),
+                    eulerAngles,
+                    new Vector3(scale.x, edgeThickness, edgeThickness),
+                    color,
+                    portalEdgeCubeMesh,
+                );
+                this.bottomCube = new GameObject(
+                    Vector3.add(pos, Vector3.add(Vector3.mul(portalUp, -scale.y / 2 - edgeThickness / 2), backOffset)),
+                    eulerAngles,
+                    new Vector3(scale.x, edgeThickness, edgeThickness),
+                    color,
+                    portalEdgeCubeMesh,
+                );
+                this.leftCube = new GameObject(
+                    Vector3.add(pos, Vector3.add(Vector3.mul(portalRight, -scale.x / 2 - edgeThickness / 2), backOffset)),
+                    eulerAngles,
+                    new Vector3(edgeThickness, scale.y + edgeThickness * 2, edgeThickness),
+                    color,
+                    portalEdgeCubeMesh,
+                );
+                this.rightCube = new GameObject(
+                    Vector3.add(pos, Vector3.add(Vector3.mul(portalRight, scale.x / 2 + edgeThickness / 2), backOffset)),
+                    eulerAngles,
+                    new Vector3(edgeThickness, scale.y + edgeThickness * 2, edgeThickness),
+                    color,
+                    portalEdgeCubeMesh,
+                );
+
+                this.backQuad = new GameObject(
+                    Vector3.add(pos, Vector3.mul(portalBack, edgeThickness)),
+                    eulerAngles,
+                    new Vector3(scale.x, scale.y, 0.05),
+                    color,
+                    portalBackQuadMesh,
+                );
+                this.backQuad.rotation = Quaternion.multiply(Quaternion.buildQuaternionAxisAngle(portalUp, 180), this.backQuad.rotation);
+            }
+
+            resize(canvasWidth, canvasHeight) {
+                this.renderTexture.width = canvasWidth;
+                this.renderTexture.height = canvasHeight;
+                this.renderTexture.pixels = new Uint8ClampedArray(canvasWidth * canvasHeight * 4);
+                this.rasterizer.resize(canvasWidth, canvasHeight);
+            }
+
+            setOtherPortal(otherPortal) {
+                this.otherPortal = otherPortal;
+            }
+
+            getAllTransformedTriangles() {
+                let allTris = [];
+                allTris.push(...this.quad.getTransformedTriangles());
+                allTris.push(...this.topCube.getTransformedTriangles());
+                allTris.push(...this.bottomCube.getTransformedTriangles());
+                allTris.push(...this.leftCube.getTransformedTriangles());
+                allTris.push(...this.rightCube.getTransformedTriangles());
+                allTris.push(...this.backQuad.getTransformedTriangles());
+                return allTris;
+            }
+
+            getPlane() {
+                let forward = this.rotation.rotateVector(Vector3.forward);
+                return new Plane(forward, Vector3.sub(this.pos, Vector3.mul(forward, 0.01)));
+            }
+
+            setPos(pos) {
+                this.pos = pos;
+                this.quad.pos = pos;
+
+                const edgeThickness = Portal.edgeThickness;
+                let portalBack = this.rotation.rotateVector(Vector3.back).normalize();
+                let backOffset = Vector3.mul(portalBack, edgeThickness / 2);
+
+                let portalUp = this.rotation.rotateVector(Vector3.up);
+                this.topCube.pos = Vector3.add(pos, Vector3.add(Vector3.mul(portalUp, this.scale.y / 2 + edgeThickness / 2), backOffset));
+                this.bottomCube.pos = Vector3.add(pos, Vector3.add(Vector3.mul(portalUp, -this.scale.y / 2 - edgeThickness / 2), backOffset));
+
+                let portalRight = this.rotation.rotateVector(Vector3.right);
+                this.leftCube.pos = Vector3.add(pos, Vector3.add(Vector3.mul(portalRight, -this.scale.x / 2 - edgeThickness / 2), backOffset));
+                this.rightCube.pos = Vector3.add(pos, Vector3.add(Vector3.mul(portalRight, this.scale.x / 2 + edgeThickness / 2), backOffset));
+
+                this.backQuad.pos = Vector3.add(pos, Vector3.mul(portalBack, edgeThickness));
+            }
+
+            setRotation(newRotation) {
+                let parts = [this.quad, this.topCube, this.bottomCube, this.leftCube, this.rightCube];
+                for (let part of parts) {
+                    part.rotation = newRotation;
+                }
+                let newUp = newRotation.rotateVector(Vector3.up);
+                this.backQuad.rotation = Quaternion.multiply(Quaternion.buildQuaternionAxisAngle(newUp, 180), newRotation);
+                this.rotation = newRotation;
+            }
+
+            rotate(eulerX, eulerY, eulerZ) {
+                let q = Quaternion.buildQuaternionEuler(new Vector3(eulerX, eulerY, eulerZ));
+                this.rotation = Quaternion.multiply(q, this.rotation);
+                this.quad.rotate(eulerX, eulerY, eulerZ);
+                this.topCube.rotate(eulerX, eulerY, eulerZ);
+                this.bottomCube.rotate(eulerX, eulerY, eulerZ);
+                this.leftCube.rotate(eulerX, eulerY, eulerZ);
+                this.rightCube.rotate(eulerX, eulerY, eulerZ);
+                this.backQuad.rotate(eulerX, eulerY, eulerZ);
+            }
+
+            isPointDirectlyInFrontOrBackOfPortal(point) {
+                let worldPointRelativeToThisPortal = Vector3.sub(point, this.pos);
+                let localPointRelativeToThisPortal = this.rotation.inverseRotateVector(worldPointRelativeToThisPortal);
+
+                return Math.abs(localPointRelativeToThisPortal.x) <= this.scale.x / 2 && Math.abs(localPointRelativeToThisPortal.y) <= this.scale.y / 2;
+            }
+
+            calculateTransformToOtherPortalTransform(position, rotation) {
+                let otherPortalUp = this.otherPortal.rotation.rotateVector(Vector3.up).normalize();
+                let rotate180 = Quaternion.buildQuaternionAxisAngle(otherPortalUp, 180);
+
+                let worldPositionRelativeToThisPortal = Vector3.sub(position, this.pos);
+                let localPositionRelativeToThisPortal = this.rotation.inverseRotateVector(worldPositionRelativeToThisPortal);
+                let worldPositionRelativeToOtherPortal = this.otherPortal.rotation.rotateVector(localPositionRelativeToThisPortal);
+                let newPos = Vector3.add(this.otherPortal.pos, rotate180.rotateVector(worldPositionRelativeToOtherPortal));
+
+                let thisPortalInverseRotation = this.rotation.conjugate();
+                let localRotationRelativeToThisPortal = Quaternion.multiply(thisPortalInverseRotation, rotation);
+                let worldRotationRelativeToOtherPortal = Quaternion.multiply(this.otherPortal.rotation, localRotationRelativeToThisPortal);
+                let newRotation = Quaternion.multiply(rotate180, worldRotationRelativeToOtherPortal);
+
+                return [newPos, newRotation];
+            }
+
+            createCloneObjectOnOtherPortal(gameObject) {
+                let cloneObjectTransform = this.calculateTransformToOtherPortalTransform(gameObject.pos, gameObject.rotation);
+                let cloneObject = new GameObject(
+                    cloneObjectTransform[0],
+                    Vector3.zero,
+                    gameObject.scale.clone(),
+                    gameObject.color,
+                    gameObject.mesh,
+                    gameObject.texture,
+                );
+                cloneObject.rotation = cloneObjectTransform[1];
+                return cloneObject;
+            }
+
+            updatePortalCameraBaseOnPlayer(playerCameraPos, playerCameraRotation) {
+                let [cameraPos, cameraRotation] = this.calculateTransformToOtherPortalTransform(playerCameraPos, playerCameraRotation);
+                this.camera.pos = cameraPos;
+                this.camera.rotation = cameraRotation;
+            }
+
+            refreshLastFramePlayerInFrontOfPortal(playerCameraPos, crossMargin) {
+                this.lastFramePlayerInFrontOfPortal = this.getPlane().distanceToPoint(playerCameraPos) >= crossMargin;
+            }
+
+            getPlayerTeleportedTransformIfGoThroughPortal(playerCameraPos, playerCameraRotation, crossMargin) {
+                let wasInFront = this.lastFramePlayerInFrontOfPortal;
+                let isPlayerInFrontOfPortal = this.getPlane().distanceToPoint(playerCameraPos) >= crossMargin;
+                this.lastFramePlayerInFrontOfPortal = isPlayerInFrontOfPortal;
+
+                if (wasInFront && !isPlayerInFrontOfPortal && this.isPointDirectlyInFrontOrBackOfPortal(playerCameraPos)) {
+                    return this.calculateTransformToOtherPortalTransform(playerCameraPos, playerCameraRotation);
+                }
+                return null;
+            }
+
+            getGameObjectTeleportedTransformIfGoThroughPortal(gameObject) {
+                let wasInFront = this.lastFrameGameObjectInFrontOfPortal.get(gameObject.id) ?? false;
+                let isGameObjectInFrontOfPortal = this.getPlane().isPointInFrontOfPlane(gameObject.pos);
+                this.lastFrameGameObjectInFrontOfPortal.set(gameObject.id, isGameObjectInFrontOfPortal);
+
+                if (wasInFront && !isGameObjectInFrontOfPortal && this.isPointDirectlyInFrontOrBackOfPortal(gameObject.pos)) {
+                    return this.calculateTransformToOtherPortalTransform(gameObject.pos, gameObject.rotation);
+                }
+                return null;
+            }
+
+            runRenderPipeline(objectTris, textureForPortal, settings, renderBBox = null) {
+                this.rasterizer.clearScreen(renderBBox);
+
+                const viewMatPortal = this.camera.getViewMatrix();
+                const otherPortalPlane = this.otherPortal.getPlane();
+                const cameraPos = this.camera.pos;
+
+                let visibleTris = [];
+                for (let tri of objectTris) {
+                    if (!tri.portal && Vector3.dot(tri.getNormal(), Vector3.sub(tri.getCenter(), cameraPos)) >= 0) continue;
+
+                    let workTri = tri.clone();
+                    if (workTri.portal) workTri.texture = textureForPortal;
+
+                    for (let clippedTri of workTri.clipAgainstPlane(otherPortalPlane)) {
+                        clippedTri.mulMat4x4(viewMatPortal);
+                        visibleTris.push(...clippedTri.clipAgainstPlane(settings.nearPlane));
+                    }
+                }
+
+                for (let tri of visibleTris) {
+                    tri.mulMat4x4(settings.projectionMatrix);
+                    tri.perspectiveDivide();
+                }
+
+                this.rasterizer.rasterizeClipSpaceTriangles(
+                    visibleTris,
+                    settings.dirLight,
+                    settings.pointLightIntensity,
+                    settings.pointLights,
+                    settings.pointLightRange,
+                    renderBBox,
+                );
+
+                return visibleTris;
+            }
+
+            updateTextureForQuad(clipSpaceTris, canvasWidth, renderBBox = null) {
+                for (let tri of clipSpaceTris) {
+                    if (!tri.portal) continue;
+
+                    let bbox = tri.boundingBox(this.renderTexture.width, this.renderTexture.height);
+                    if (renderBBox != null) {
+                        bbox = BoundingBox.intersect(renderBBox, bbox);
+                        if (!bbox.isValid()) continue;
+                    }
+
+                    for (let y = bbox.minY; y <= bbox.maxY; y++) {
+                        const rowStart = (y * canvasWidth + bbox.minX) * 4;
+                        const rowEnd = (y * canvasWidth + bbox.maxX + 1) * 4;
+                        (this.renderTexture.pixels).set(this.rasterizer.screenBuffer.subarray(rowStart, rowEnd), rowStart);
+                    }
+                }
+
+                this.quad.texture = this.renderTexture;
+            }
+
+            getQuadBoundingBox(cameraPos, cameraRot, settings) {
+                let viewMatPortal = Mat4x4.ViewFromPosRot(cameraPos, cameraRot);
+                const canvasWidth = settings.canvasWidth,
+                    canvasHeight = settings.canvasHeight;
+
+                let visibleTris = [];
+                for (let tri of this.quad.getTransformedTriangles()) {
+                    if (Vector3.dot(tri.getNormal(), Vector3.sub(tri.getCenter(), cameraPos)) < 0) {
+                        tri.mulMat4x4(viewMatPortal);
+                        visibleTris.push(...tri.clipAgainstPlane(settings.nearPlane));
+                    }
+                }
+
+                let totalBBox = null;
+                for (let tri of visibleTris) {
+                    tri.mulMat4x4(settings.projectionMatrix);
+                    tri.perspectiveDivide();
+
+                    let vertices = tri.vertices;
+                    for (let i = 0; i < vertices.length; i++) {
+                        vertices[i] = new Vector3(
+                            vertices[i].x * (canvasWidth / 2) + canvasWidth / 2,
+                            -vertices[i].y * (canvasHeight / 2) + canvasHeight / 2,
+                            vertices[i].z,
+                        );
+                    }
+
+                    const triBBox = tri.boundingBox(canvasWidth, canvasHeight);
+                    if (triBBox.isValid()) {
+                        totalBBox = totalBBox == null ? triBBox : BoundingBox.union(totalBBox, triBBox);
+                    }
+                }
+
+                return totalBBox;
+            }
+
+            recursivePortalOperation(playerCamera, objectTris, settings) {
+                let cameraTransforms = [[playerCamera.pos, playerCamera.rotation]];
+                let firstBoundingBox = this.getQuadBoundingBox(playerCamera.pos, playerCamera.rotation, settings);
+                if (firstBoundingBox == null || !firstBoundingBox.isValid()) return;
+
+                let quadBoundingBoxes = [firstBoundingBox];
+                let deepest = 0;
+                for (let i = 1; i <= settings.portalLimit; i++) {
+                    cameraTransforms.push(this.calculateTransformToOtherPortalTransform(cameraTransforms[i - 1][0], cameraTransforms[i - 1][1]));
+                    deepest = i;
+
+                    let newQuadBoundingBox = this.getQuadBoundingBox(cameraTransforms[i][0], cameraTransforms[i][1], settings);
+                    if (newQuadBoundingBox == null || !BoundingBox.isOverlap(quadBoundingBoxes[i - 1], newQuadBoundingBox)) break;
+                    quadBoundingBoxes.push(BoundingBox.intersect(quadBoundingBoxes[i - 1], newQuadBoundingBox));
+                }
+
+                if (deepest == 0) return;
+
+                for (let i = deepest; i >= 1; i--) {
+                    this.camera.pos = cameraTransforms[i][0];
+                    this.camera.rotation = cameraTransforms[i][1];
+                    let textureForPortal = i == deepest ? null : this.renderTexture;
+                    let clipSpaceTris = this.runRenderPipeline(objectTris, textureForPortal, settings, quadBoundingBoxes[i - 1]);
+                    this.updateTextureForQuad(clipSpaceTris, settings.canvasWidth, quadBoundingBoxes[i - 1]);
+                }
+            }
+        }
+
         // ===== index.js =====
         const gameCanvas = (document.getElementById("gameCanvas"));
         const ctx = (gameCanvas.getContext("2d"));
@@ -1693,8 +2028,9 @@
         const fov = 60;
         let znear = 0.01,
             zfar = 1000;
+        let portalCrossMargin = znear * 2;
         let projectionMatrix = Mat4x4.Projection(fov, gameCanvas.height, gameCanvas.width, znear, zfar);
-        let camera = new Camera(new Vector3(0, 10, -10), new Vector3(-25, 0, 0), 5, 0.2);
+        let camera = new Camera(new Vector3(0, 1, -10), new Vector3(0, 0, 0), 6, 0.2);
         let nearPlane = new Plane(Vector3.forward, new Vector3(0, 0, znear));
         let keyStates = {};
 
@@ -1712,8 +2048,8 @@
         let useASCII = false;
         let asciiWidth = 260;
         let asciiHeight = 195;
-        let canvasRenderWidth = 400;
-        let canvasRenderHeight = 300;
+        let canvasRenderWidth = 800;
+        let canvasRenderHeight = 600;
 
         canvasResWidthInput.value = canvasRenderWidth.toString();
         canvasResHeightInput.value = canvasRenderHeight.toString();
@@ -1734,12 +2070,8 @@
 
         const lightDirIntensitySlider = (document.getElementById("dirIntensity"));
         const lightDirIntensityText = (document.getElementById("dirIntensityText"));
-        const lightDirRotateSpeedSlider = (document.getElementById("dirRotateSpeed"));
-        const lightDirRotateSpeedText = (document.getElementById("dirRotateSpeedText"));
-        let dirLightDefaultDir = new Vector3(-1, -1, -1);
+        let dirLightDefaultDir = new Vector3(-0.4, -1, -0.4);
         let dirLight = new DirectionalLight(dirLightDefaultDir, parseFloat(lightDirIntensitySlider.value));
-        let dirLightRotation = Quaternion.buildQuaternionEuler(Vector3.zero);
-        let dirLightRotateSpeed = parseFloat(lightDirRotateSpeedSlider.value);
 
         const pointLightIntensitySlider = (document.getElementById("pointIntensity"));
         const pointLightIntensityText = (document.getElementById("pointIntensityText"));
@@ -1748,38 +2080,254 @@
         const pointLightRangeText = (document.getElementById("pointRangeText"));
         let pointLightRange = parseFloat(pointLightRangeSlider.value);
 
-        const shadowCheckbox = (document.getElementById("useShadow"));
-        let useShadow = true;
+        const portalLimitInput = (document.getElementById("portalLimit"));
+        let portalLimit = parseInt(portalLimitInput.value);
 
-        let brickTexture = new Texture(
-            "https://raw.githubusercontent.com/hachihao792001/hachihao792001.github.io/refs/heads/main/blogs/graphics3D/images/textures/brick.jpg",
+        let playerCubeTexture = new Texture(
+            "https://raw.githubusercontent.com/hachihao792001/hachihao792001.github.io/refs/heads/main/blogs/graphics3D/images/textures/wheatly.png",
         );
-        let woodTexture = new Texture(
-            "https://raw.githubusercontent.com/hachihao792001/hachihao792001.github.io/refs/heads/main/blogs/graphics3D/images/textures/Wood_Tower_Col.jpg",
+        let companionCubeTexture = new Texture(
+            "https://raw.githubusercontent.com/hachihao792001/hachihao792001.github.io/refs/heads/main/blogs/graphics3D/images/textures/companion_cube.png",
+        );
+        let wallTexture = new Texture(
+            "https://raw.githubusercontent.com/hachihao792001/hachihao792001.github.io/refs/heads/main/blogs/graphics3D/images/textures/concrete_modular_wall001a.png",
+        );
+        let floorTexture = new Texture(
+            "https://raw.githubusercontent.com/hachihao792001/hachihao792001.github.io/refs/heads/main/blogs/graphics3D/images/textures/concrete_modular_floor001a.png",
         );
 
         let cubeMesh = new Cube();
-        let woodTower = new GameObject(
-            new Vector3(0, 0, 0),
-            Vector3.zero,
-            new Vector3(1, 1, 1),
-            new Color(255, 255, 255),
-            new ObjMesh("https://raw.githubusercontent.com/hachihao792001/hachihao792001.github.io/refs/heads/main/blogs/graphics3D/models/wooden watch tower2.obj"),
-            woodTexture,
-        );
-        let ground = new GameObject(new Vector3(0, 0, 0), Vector3.zero, new Vector3(30, 1, 30), new Color(0, 255, 0), cubeMesh, brickTexture);
+        let quadMesh = new Quad();
+
         let pointLights = [
-            new GameObject(new Vector3(0, 2, 5), Vector3.zero, new Vector3(0.1, 0.1, 0.1), new Color(255, 255, 255), cubeMesh, null, "Point light 1"),
-            new GameObject(new Vector3(0, 2, -5), Vector3.zero, new Vector3(0.1, 0.1, 0.1), new Color(255, 255, 255), cubeMesh, null, "Point light 2"),
+            new GameObject(new Vector3(0.43, 3.53, -8.69), new Vector3(0, -90, 0), new Vector3(0.2, 0.2, 0.2), new Color(0, 255, 0), cubeMesh, floorTexture),
+            new GameObject(new Vector3(0.43, 1.625, -3.37), new Vector3(0, -90, 0), new Vector3(0.2, 0.2, 0.2), new Color(0, 255, 0), cubeMesh, floorTexture),
+            new GameObject(new Vector3(0.43, 8.875, 0.71), new Vector3(0, -90, 0), new Vector3(0.2, 0.2, 0.2), new Color(0, 255, 0), cubeMesh, floorTexture),
+            new GameObject(new Vector3(-9.2, 8.875, 0.7), new Vector3(0, -90, 0), new Vector3(0.2, 0.2, 0.2), new Color(0, 255, 0), cubeMesh, floorTexture),
+            new GameObject(new Vector3(-9.2, 8.875, 6.2), new Vector3(0, -90, 0), new Vector3(0.2, 0.2, 0.2), new Color(0, 255, 0), cubeMesh, floorTexture),
+            new GameObject(new Vector3(-9.2, 8.875, 16.4), new Vector3(0, -90, 0), new Vector3(0.2, 0.2, 0.2), new Color(0, 255, 0), cubeMesh, floorTexture),
+            new GameObject(new Vector3(-9.2, -5.38, 16.4), new Vector3(0, -90, 0), new Vector3(0.2, 0.2, 0.2), new Color(0, 255, 0), cubeMesh, floorTexture),
+            new GameObject(new Vector3(-9.2, 8.875, 27.5), new Vector3(0, -90, 0), new Vector3(0.2, 0.2, 0.2), new Color(0, 255, 0), cubeMesh, floorTexture),
+            new GameObject(new Vector3(-19.9, 8.875, 27.5), new Vector3(0, -90, 0), new Vector3(0.2, 0.2, 0.2), new Color(0, 255, 0), cubeMesh, floorTexture),
+            new GameObject(new Vector3(-30.2, 8.875, 27.5), new Vector3(0, -90, 0), new Vector3(0.2, 0.2, 0.2), new Color(0, 255, 0), cubeMesh, floorTexture),
+            new GameObject(new Vector3(-39.225, 1.625, 27.5), new Vector3(0, -90, 0), new Vector3(0.2, 0.2, 0.2), new Color(0, 255, 0), cubeMesh, floorTexture),
+            new GameObject(new Vector3(-30.49, -5.49, 27.5), new Vector3(0, -90, 0), new Vector3(0.2, 0.2, 0.2), new Color(0, 255, 0), cubeMesh, floorTexture),
+            new GameObject(new Vector3(-44.54, 3.531, 27.5), new Vector3(0, -90, 0), new Vector3(0.2, 0.2, 0.2), new Color(0, 255, 0), cubeMesh, floorTexture),
+            new GameObject(new Vector3(-70.95, 15.26, 27.5), new Vector3(0, -90, 0), new Vector3(0.2, 0.2, 0.2), new Color(0, 255, 0), cubeMesh, floorTexture),
+            new GameObject(new Vector3(-88.17, 0.72, 27.5), new Vector3(0, -90, 0), new Vector3(0.2, 0.2, 0.2), new Color(0, 255, 0), cubeMesh, floorTexture),
+            new GameObject(new Vector3(-70.89, 12.27, 6.8), new Vector3(0, -90, 0), new Vector3(0.2, 0.2, 0.2), new Color(0, 255, 0), cubeMesh, floorTexture),
+            new GameObject(new Vector3(-96.7, 12.27, 45.8), new Vector3(0, -90, 0), new Vector3(0.2, 0.2, 0.2), new Color(0, 255, 0), cubeMesh, floorTexture),
+            new GameObject(new Vector3(-58.06, 7.79, 48.29), new Vector3(0, -90, 0), new Vector3(0.2, 0.2, 0.2), new Color(0, 255, 0), cubeMesh, floorTexture),
+            new GameObject(new Vector3(-49.45, 9.8, 27.28), new Vector3(0, -90, 0), new Vector3(0.2, 0.2, 0.2), new Color(0, 255, 0), cubeMesh, floorTexture),
+            new GameObject(new Vector3(-96.27, 7.79, 4.11), new Vector3(0, -90, 0), new Vector3(0.2, 0.2, 0.2), new Color(0, 255, 0), cubeMesh, floorTexture),
         ];
 
-        let controllableObjects = [pointLights[0], pointLights[1]];
+        let sceneObjects = [
+            new GameObject(new Vector3(0.125, 3.75, -7.75), new Vector3(-90, 0, 0), new Vector3(7.75, 11, 1), new Color(0, 255, 0), quadMesh, floorTexture),
+            new GameObject(new Vector3(0.25, 1.75, -3.25), new Vector3(-90, 0, 0), new Vector3(4, 2, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-2.5, 2, -5.25), new Vector3(180, -45, 180), new Vector3(2.121, 15, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-3.25, 2, -9), new Vector3(0, -90, 0), new Vector3(6, 15, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-2.5, 2, -12.75), new Vector3(0, -45, 0), new Vector3(2.121, 15, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(3.125, 2, -12.625), new Vector3(0, 45, 0), new Vector3(2.475, 15, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(3.125, 2, -5.125), new Vector3(180, 45, 180), new Vector3(2.475, 15, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(0.25, 2.75, -4.25), new Vector3(180, 0, 180), new Vector3(4, 2, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(0.25, 2, -13.5), new Vector3(0, 0, 0), new Vector3(4, 15, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(4, 2, -8.875), new Vector3(0, 90, 0), new Vector3(5.75, 15, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(2.25, 2, -3.25), new Vector3(0, 90, 0), new Vector3(2, 15, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-1.75, 2, -3.375), new Vector3(0, -90, 0), new Vector3(2.25, 15, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-43.75, 3.75, 27.375), new Vector3(-90, 0, 90), new Vector3(7.75, 11, 1), new Color(0, 255, 0), quadMesh, floorTexture),
+            new GameObject(new Vector3(-39.25, 1.75, 27.25), new Vector3(-90, 0, 90), new Vector3(4, 2, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-41.25, 2, 30), new Vector3(180, 45, 180), new Vector3(2.121, 15, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-44.875, 2, 30.75), new Vector3(180, 0, 180), new Vector3(5.75, 15, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-48.5, 2, 30), new Vector3(180, -45, 180), new Vector3(2.121, 15, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-48.5, 2, 24.5), new Vector3(0, -45, 0), new Vector3(2.121, 15, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-41, 2, 24.5), new Vector3(0, 45, 0), new Vector3(2.121, 15, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-40.25, 2.75, 27.25), new Vector3(0, 90, 0), new Vector3(4, 2, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-49.25, 5.625, 27.25), new Vector3(0, -90, 0), new Vector3(4, 7.75, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-44.75, 2, 23.75), new Vector3(0, 0, 0), new Vector3(6, 15, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-39.25, 2, 25.25), new Vector3(0, 0, 0), new Vector3(2, 15, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-39.375, 2, 29.25), new Vector3(180, 0, 180), new Vector3(2.25, 15, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-4.375, -1.75, -1.25), new Vector3(90, 0, 0), new Vector3(16.75, 24, 1), new Color(0, 255, 0), quadMesh, floorTexture),
+            new GameObject(new Vector3(-22, 9, 17), new Vector3(-90, 0, 0), new Vector3(53.5, 60.5, 1), new Color(0, 255, 0), quadMesh, floorTexture),
+            new GameObject(new Vector3(-9, -3.625, 10.75), new Vector3(0, 0, 0), new Vector3(7.5, 3.75, 1), new Color(0, 255, 0), quadMesh, floorTexture),
+            new GameObject(new Vector3(-9, -3.625, 21.75), new Vector3(180, 0, 180), new Vector3(7.5, 3.75, 1), new Color(0, 255, 0), quadMesh, floorTexture),
+            new GameObject(new Vector3(-9, -5.5, 16.25), new Vector3(90, 0, 0), new Vector3(7.5, 11, 1), new Color(0, 255, 0), quadMesh, floorTexture),
+            new GameObject(new Vector3(-16.6919, -2.4297, 27.296), new Vector3(-90.0198, 0, -180), new Vector3(0.9132, 10.931, 0.2007), new Color(0, 255, 0), cubeMesh, floorTexture),
+            new GameObject(new Vector3(-15.5588, -1.9487, 27.296), new Vector3(-90.0198, 0, -180), new Vector3(0.9132, 10.931, 0.2007), new Color(0, 255, 0), cubeMesh, floorTexture),
+            new GameObject(new Vector3(-17.6009, -2.9107, 27.296), new Vector3(-90.0198, 0, -180), new Vector3(0.9132, 10.931, 0.2007), new Color(0, 255, 0), cubeMesh, floorTexture),
+            new GameObject(new Vector3(-18.5316, -3.36, 27.296), new Vector3(-90.0198, 0, -180), new Vector3(0.9132, 10.931, 0.2007), new Color(0, 255, 0), cubeMesh, floorTexture),
+            new GameObject(new Vector3(-19.4616, -3.8198, 27.296), new Vector3(-90.0198, 0, -180), new Vector3(0.9132, 10.931, 0.2007), new Color(0, 255, 0), cubeMesh, floorTexture),
+            new GameObject(new Vector3(-20.3816, -4.2903, 27.296), new Vector3(-90.0198, 0, -180), new Vector3(0.9132, 10.931, 0.2007), new Color(0, 255, 0), cubeMesh, floorTexture),
+            new GameObject(new Vector3(-21.3116, -4.7607, 27.296), new Vector3(-90.0198, 0, -180), new Vector3(0.9132, 10.931, 0.2007), new Color(0, 255, 0), cubeMesh, floorTexture),
+            new GameObject(new Vector3(-22.1996, -5.1994, 27.296), new Vector3(-90.0198, 0, -180), new Vector3(0.9132, 10.931, 0.2007), new Color(0, 255, 0), cubeMesh, floorTexture),
+            new GameObject(new Vector3(-10.625, -1.75, 27.25), new Vector3(90, 0, 0), new Vector3(10.75, 11, 1), new Color(0, 255, 0), quadMesh, floorTexture),
+            new GameObject(new Vector3(-27, -5.5, 27.25), new Vector3(90, 0, 0), new Vector3(8.5, 11, 1), new Color(0, 255, 0), quadMesh, floorTexture),
+            new GameObject(new Vector3(-40.1308, -1.75, 27.25), new Vector3(90, 0, 0), new Vector3(18.262, 11, 1), new Color(0, 255, 0), quadMesh, floorTexture),
+            new GameObject(new Vector3(-31, -3.625, 27.25), new Vector3(0, -90, 0), new Vector3(11, 3.75, 1), new Color(0, 255, 0), quadMesh, floorTexture),
+            new GameObject(new Vector3(-12.75, 2, 9.75), new Vector3(0, -90, 0), new Vector3(24, 15, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-5.25, 2, 18), new Vector3(0, 90, 0), new Vector3(29.5, 15, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-21.75, 2, 32.75), new Vector3(180, 0, 180), new Vector3(33, 15, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-38.25, 5.625, 27.25), new Vector3(0, -90, 0), new Vector3(11, 7.75, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-38.25, 0, 23.5), new Vector3(0, -90, 0), new Vector3(3.5, 3.5, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-38.25, 0, 31), new Vector3(0, -90, 0), new Vector3(3.5, 3.5, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-25.5, 2, 21.75), new Vector3(0, 0, 0), new Vector3(25.5, 15, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-0.625, 2, 3.25), new Vector3(180, 0, 180), new Vector3(9.25, 15, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-7.25, 2, -2.25), new Vector3(0, 0, 0), new Vector3(11, 15, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(1.125, 5.625, -2.25), new Vector3(0, 0, 0), new Vector3(5.75, 7.75, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(3.125, 0, -2.25), new Vector3(0, 0, 0), new Vector3(1.75, 3.5, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(4, 2, 0.625), new Vector3(0, 90, 0), new Vector3(5.75, 15, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-93, -1.75, 8.5), new Vector3(90, 0, 0), new Vector3(12.5, 12.5, 1), new Color(0, 255, 0), quadMesh, floorTexture),
+            new GameObject(new Vector3(-93, -1.75, 21), new Vector3(90, 0, 0), new Vector3(12.5, 12.5, 1), new Color(0, 255, 0), quadMesh, floorTexture),
+            new GameObject(new Vector3(-93, -1.75, 33.5), new Vector3(90, 0, 0), new Vector3(12.5, 12.5, 1), new Color(0, 255, 0), quadMesh, floorTexture),
+            new GameObject(new Vector3(-93, -1.75, 46), new Vector3(90, 0, 0), new Vector3(12.5, 12.5, 1), new Color(0, 255, 0), quadMesh, floorTexture),
+            new GameObject(new Vector3(-80.5, -1.75, 8.5), new Vector3(90, 0, 0), new Vector3(12.5, 12.5, 1), new Color(0, 255, 0), quadMesh, floorTexture),
+            new GameObject(new Vector3(-80.5, -1.75, 21), new Vector3(90, 0, 0), new Vector3(12.5, 12.5, 1), new Color(0, 255, 0), quadMesh, floorTexture),
+            new GameObject(new Vector3(-80.5, -1.75, 33.5), new Vector3(90, 0, 0), new Vector3(12.5, 12.5, 1), new Color(0, 255, 0), quadMesh, floorTexture),
+            new GameObject(new Vector3(-80.5, -1.75, 46), new Vector3(90, 0, 0), new Vector3(12.5, 12.5, 1), new Color(0, 255, 0), quadMesh, floorTexture),
+            new GameObject(new Vector3(-68, -1.75, 8.5), new Vector3(90, 0, 0), new Vector3(12.5, 12.5, 1), new Color(0, 255, 0), quadMesh, floorTexture),
+            new GameObject(new Vector3(-68, -1.75, 21), new Vector3(90, 0, 0), new Vector3(12.5, 12.5, 1), new Color(0, 255, 0), quadMesh, floorTexture),
+            new GameObject(new Vector3(-68, -1.75, 33.5), new Vector3(90, 0, 0), new Vector3(12.5, 12.5, 1), new Color(0, 255, 0), quadMesh, floorTexture),
+            new GameObject(new Vector3(-68, -1.75, 46), new Vector3(90, 0, 0), new Vector3(12.5, 12.5, 1), new Color(0, 255, 0), quadMesh, floorTexture),
+            new GameObject(new Vector3(-55.5, -1.75, 8.5), new Vector3(90, 0, 0), new Vector3(12.5, 12.5, 1), new Color(0, 255, 0), quadMesh, floorTexture),
+            new GameObject(new Vector3(-55.5, -1.75, 21), new Vector3(90, 0, 0), new Vector3(12.5, 12.5, 1), new Color(0, 255, 0), quadMesh, floorTexture),
+            new GameObject(new Vector3(-55.5, -1.75, 33.5), new Vector3(90, 0, 0), new Vector3(12.5, 12.5, 1), new Color(0, 255, 0), quadMesh, floorTexture),
+            new GameObject(new Vector3(-55.5, -1.75, 46), new Vector3(90, 0, 0), new Vector3(12.5, 12.5, 1), new Color(0, 255, 0), quadMesh, floorTexture),
+            new GameObject(new Vector3(-93, 22.25, 8.5), new Vector3(-90, 0, 0), new Vector3(12.5, 12.5, 1), new Color(0, 255, 0), quadMesh, floorTexture),
+            new GameObject(new Vector3(-93, 22.25, 21), new Vector3(-90, 0, 0), new Vector3(12.5, 12.5, 1), new Color(0, 255, 0), quadMesh, floorTexture),
+            new GameObject(new Vector3(-93, 22.25, 33.5), new Vector3(-90, 0, 0), new Vector3(12.5, 12.5, 1), new Color(0, 255, 0), quadMesh, floorTexture),
+            new GameObject(new Vector3(-93, 22.25, 46), new Vector3(-90, 0, 0), new Vector3(12.5, 12.5, 1), new Color(0, 255, 0), quadMesh, floorTexture),
+            new GameObject(new Vector3(-80.5, 22.25, 8.5), new Vector3(-90, 0, 0), new Vector3(12.5, 12.5, 1), new Color(0, 255, 0), quadMesh, floorTexture),
+            new GameObject(new Vector3(-80.5, 22.25, 21), new Vector3(-90, 0, 0), new Vector3(12.5, 12.5, 1), new Color(0, 255, 0), quadMesh, floorTexture),
+            new GameObject(new Vector3(-80.5, 22.25, 33.5), new Vector3(-90, 0, 0), new Vector3(12.5, 12.5, 1), new Color(0, 255, 0), quadMesh, floorTexture),
+            new GameObject(new Vector3(-80.5, 22.25, 46), new Vector3(-90, 0, 0), new Vector3(12.5, 12.5, 1), new Color(0, 255, 0), quadMesh, floorTexture),
+            new GameObject(new Vector3(-68, 22.25, 8.5), new Vector3(-90, 0, 0), new Vector3(12.5, 12.5, 1), new Color(0, 255, 0), quadMesh, floorTexture),
+            new GameObject(new Vector3(-68, 22.25, 21), new Vector3(-90, 0, 0), new Vector3(12.5, 12.5, 1), new Color(0, 255, 0), quadMesh, floorTexture),
+            new GameObject(new Vector3(-68, 22.25, 33.5), new Vector3(-90, 0, 0), new Vector3(12.5, 12.5, 1), new Color(0, 255, 0), quadMesh, floorTexture),
+            new GameObject(new Vector3(-68, 22.25, 46), new Vector3(-90, 0, 0), new Vector3(12.5, 12.5, 1), new Color(0, 255, 0), quadMesh, floorTexture),
+            new GameObject(new Vector3(-55.5, 22.25, 8.5), new Vector3(-90, 0, 0), new Vector3(12.5, 12.5, 1), new Color(0, 255, 0), quadMesh, floorTexture),
+            new GameObject(new Vector3(-55.5, 22.25, 21), new Vector3(-90, 0, 0), new Vector3(12.5, 12.5, 1), new Color(0, 255, 0), quadMesh, floorTexture),
+            new GameObject(new Vector3(-55.5, 22.25, 33.5), new Vector3(-90, 0, 0), new Vector3(12.5, 12.5, 1), new Color(0, 255, 0), quadMesh, floorTexture),
+            new GameObject(new Vector3(-55.5, 22.25, 46), new Vector3(-90, 0, 0), new Vector3(12.5, 12.5, 1), new Color(0, 255, 0), quadMesh, floorTexture),
+            new GameObject(new Vector3(-99.25, 4.25, 8.5), new Vector3(0, -90, 0), new Vector3(12.5, 12, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-99.25, 16.25, 8.5), new Vector3(0, -90, 0), new Vector3(12.5, 12, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-99.25, 4.25, 21), new Vector3(0, -90, 0), new Vector3(12.5, 12, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-99.25, 16.25, 21), new Vector3(0, -90, 0), new Vector3(12.5, 12, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-99.25, 4.25, 33.5), new Vector3(0, -90, 0), new Vector3(12.5, 12, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-99.25, 16.25, 33.5), new Vector3(0, -90, 0), new Vector3(12.5, 12, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-99.25, 4.25, 46), new Vector3(0, -90, 0), new Vector3(12.5, 12, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-99.25, 16.25, 46), new Vector3(0, -90, 0), new Vector3(12.5, 12, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-93, 4.25, 2.25), new Vector3(0, 0, 0), new Vector3(12.5, 12, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-93, 16.25, 2.25), new Vector3(0, 0, 0), new Vector3(12.5, 12, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-80.5, 4.25, 2.25), new Vector3(0, 0, 0), new Vector3(12.5, 12, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-80.5, 16.25, 2.25), new Vector3(0, 0, 0), new Vector3(12.5, 12, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-68, 4.25, 2.25), new Vector3(0, 0, 0), new Vector3(12.5, 12, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-68, 16.25, 2.25), new Vector3(0, 0, 0), new Vector3(12.5, 12, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-55.5, 4.25, 2.25), new Vector3(0, 0, 0), new Vector3(12.5, 12, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-55.5, 16.25, 2.25), new Vector3(0, 0, 0), new Vector3(12.5, 12, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-93, 4.25, 52.25), new Vector3(180, 0, 180), new Vector3(12.5, 12, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-93, 16.25, 52.25), new Vector3(180, 0, 180), new Vector3(12.5, 12, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-80.5, 4.25, 52.25), new Vector3(180, 0, 180), new Vector3(12.5, 12, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-80.5, 16.25, 52.25), new Vector3(180, 0, 180), new Vector3(12.5, 12, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-68, 4.25, 52.25), new Vector3(180, 0, 180), new Vector3(12.5, 12, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-68, 16.25, 52.25), new Vector3(180, 0, 180), new Vector3(12.5, 12, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-55.5, 4.25, 52.25), new Vector3(180, 0, 180), new Vector3(12.5, 12, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-55.5, 16.25, 52.25), new Vector3(180, 0, 180), new Vector3(12.5, 12, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-49.25, 4.25, 8), new Vector3(0, 90, 0), new Vector3(11.5, 12, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-49.25, 16.25, 8), new Vector3(0, 90, 0), new Vector3(11.5, 12, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-49.25, 4.25, 19.5), new Vector3(0, 90, 0), new Vector3(11.5, 12, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-49.25, 16.25, 19.5), new Vector3(0, 90, 0), new Vector3(11.5, 12, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-49.25, 4.25, 35), new Vector3(0, 90, 0), new Vector3(11.5, 12, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-49.25, 16.25, 35), new Vector3(0, 90, 0), new Vector3(11.5, 12, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-49.25, 4.25, 46.5), new Vector3(0, 90, 0), new Vector3(11.5, 12, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-49.25, 16.25, 46.5), new Vector3(0, 90, 0), new Vector3(11.5, 12, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-49.25, 6.875, 27.25), new Vector3(0, 90, 0), new Vector3(4, 10.25, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-49.25, 17.125, 27.25), new Vector3(0, 90, 0), new Vector3(4, 10.25, 1), new Color(0, 255, 0), quadMesh, wallTexture),
+            new GameObject(new Vector3(-57, 0.6, 27.25), new Vector3(0, 0, 18), new Vector3(14, 0.7, 12), new Color(0, 255, 0), cubeMesh, floorTexture),
+            new GameObject(new Vector3(-68.77, 2.8, 27.25), new Vector3(0, 0, 0), new Vector3(10, 0.7, 12), new Color(0, 255, 0), cubeMesh, floorTexture),
+            new GameObject(new Vector3(-70, 1.6, 35), new Vector3(35, 0, 0), new Vector3(14, 0.7, 12), new Color(0, 255, 0), cubeMesh, floorTexture),
+            new GameObject(new Vector3(-70, 1.6, 47), new Vector3(-35, 0, 0), new Vector3(14, 0.7, 12), new Color(0, 255, 0), cubeMesh, floorTexture),
+            new GameObject(new Vector3(-91, 0.5, 8), new Vector3(0, 0, 15), new Vector3(9, 0.6, 7), new Color(0, 255, 0), cubeMesh, floorTexture),
+            new GameObject(new Vector3(-91, 1, 17), new Vector3(0, 0, 30), new Vector3(9, 0.6, 7), new Color(0, 255, 0), cubeMesh, floorTexture),
+            new GameObject(new Vector3(-91, 1.5, 26), new Vector3(0, 0, 45), new Vector3(9, 0.6, 7), new Color(0, 255, 0), cubeMesh, floorTexture),
+            new GameObject(new Vector3(-91, 2.2, 35), new Vector3(0, 0, 60), new Vector3(9, 0.6, 7), new Color(0, 255, 0), cubeMesh, floorTexture),
+            new GameObject(new Vector3(-91, 2.7, 44), new Vector3(0, 0, 75), new Vector3(9, 0.6, 7), new Color(0, 255, 0), cubeMesh, floorTexture),
+            new GameObject(new Vector3(-68.16, 7.87, 18.16), new Vector3(25, 34.9999, 0), new Vector3(10, 0.6, 10), new Color(0, 255, 0), cubeMesh, floorTexture),
+            new GameObject(new Vector3(-71.71, 9.17, 42.48), new Vector3(-20, -50, 15), new Vector3(10, 0.6, 10), new Color(0, 255, 0), cubeMesh, floorTexture),
+            new GameObject(new Vector3(-84, 9, 30), new Vector3(40, 20, -25), new Vector3(9, 0.6, 9), new Color(0, 255, 0), cubeMesh, floorTexture),
+            new GameObject(new Vector3(-56, 9.5, 9), new Vector3(0, 0, 0), new Vector3(10, 0.8, 10), new Color(0, 255, 0), cubeMesh, floorTexture),
+            new GameObject(new Vector3(-96, 13, 27.25), new Vector3(0, 0, 0), new Vector3(5, 0.8, 14), new Color(0, 255, 0), cubeMesh, floorTexture),
+            new GameObject(new Vector3(-71, 16.5, 27.25), new Vector3(0, 0, 0), new Vector3(9, 0.8, 9), new Color(0, 255, 0), cubeMesh, floorTexture),
+            new GameObject(new Vector3(-74, 6.5, 8.21), new Vector3(0, 0, 80), new Vector3(16, 0.9, 11), new Color(0, 255, 0), cubeMesh, floorTexture),
+            new GameObject(new Vector3(-57, 8, 49), new Vector3(72, 0, 0), new Vector3(11, 0.9, 15), new Color(0, 255, 0), cubeMesh, floorTexture),
+        ];
 
-        for (let light of pointLights) {
-            light.isHoldable = true;
-        }
+        let playerCube = new GameObject(
+            camera.pos,
+            Vector3.zero,
+            new Vector3(0.5, 0.5, 0.5),
+            new Color(255, 255, 255),
+            new ObjMesh("https://raw.githubusercontent.com/hachihao792001/hachihao792001.github.io/refs/heads/main/blogs/graphics3D/models/grass_block.obj"),
+            playerCubeTexture,
+            "Player",
+        );
+        playerCube.rotation = camera.rotation;
+
+        let companionCube = new GameObject(
+            new Vector3(2, -0.7, 1.2),
+            Vector3.zero,
+            new Vector3(1, 1, 1),
+            new Color(0, 255, 0),
+            cubeMesh,
+            companionCubeTexture,
+            "Companion cube",
+        );
+        companionCube.isHoldable = true;
+
+        let portal1 = new Portal(
+            "Orange portal",
+            new Vector3(-10, 1.5, 32),
+            new Vector3(0, 180, 0),
+            new Vector3(2, 4, 1),
+            new Color(255, 201, 94),
+            gameCanvas.width,
+            gameCanvas.height,
+            ctx,
+        );
+        let portal2 = new Portal(
+            "Blue portal",
+            new Vector3(-12, 1.5, 2),
+            new Vector3(0, -90, 0),
+            new Vector3(2, 4, 1),
+            new Color(17, 155, 255),
+            gameCanvas.width,
+            gameCanvas.height,
+            ctx,
+        );
+        portal1.setOtherPortal(portal2);
+        portal2.setOtherPortal(portal1);
+        let portals = [portal1, portal2];
+
+        let canInteractWithPortalGameObjects = [playerCube, companionCube];
+
+
+        let controllableObjects = [
+            ...portals.map((portal) => ({
+                name: portal.name,
+                getPos: () => portal.pos,
+                setPos: (pos) => portal.setPos(pos),
+                rotate: (x, y, z) => portal.rotate(x, y, z),
+            })),
+            {
+                name: companionCube.name,
+                getPos: () => companionCube.pos,
+                setPos: (pos) => (companionCube.pos = pos),
+                rotate: (x, y, z) => companionCube.rotate(x, y, z),
+            },
+        ];
+
         let holdingObject = null;
         let holdingDistance = 5;
+        let throwSpeed = 10;
 
         const controllingObjectText = (document.getElementById("controllingObject"));
         let controllingObject = 0;
@@ -1819,7 +2367,7 @@
             }
             if (!posDelta.equal(Vector3.zero)) {
                 posDelta = Vector3.mul(posDelta.normalize(), dt * controllingMoveSpeed);
-                controlling.pos = Vector3.add(controlling.pos, posDelta);
+                controlling.setPos(Vector3.add(controlling.getPos(), posDelta));
             }
 
             let rotateEuler = Vector3.zero.clone();
@@ -1837,31 +2385,109 @@
             }
         }
 
+        function updatePortalTeleports() {
+            for (let portal of portals) {
+                portal.updatePortalCameraBaseOnPlayer(camera.pos, camera.rotation);
+            }
+
+            for (let portal of portals) {
+                let teleported = portal.getPlayerTeleportedTransformIfGoThroughPortal(camera.pos, camera.rotation, portalCrossMargin);
+                if (teleported == null) continue;
+
+                camera.updateTransformAndCorrectRoll(teleported[0], teleported[1]);
+                for (let other of portals) {
+                    other.refreshLastFramePlayerInFrontOfPortal(camera.pos, portalCrossMargin);
+                }
+                break;
+            }
+
+            for (let gameObject of canInteractWithPortalGameObjects) {
+                for (let portal of portals) {
+                    let teleported = portal.getGameObjectTeleportedTransformIfGoThroughPortal(gameObject);
+                    if (teleported == null) continue;
+
+                    gameObject.pos = teleported[0];
+                    let oldLocalVelocity = gameObject.rotation.inverseRotateVector(gameObject.velocity);
+                    gameObject.velocity = teleported[1].rotateVector(oldLocalVelocity);
+                    gameObject.rotation = teleported[1];
+                    break;
+                }
+            }
+        }
+
         function updateGameObjectTransforms() {
             updateControllingObject();
+
             camera.updateMovement(dt, keyStates);
-            if (lookInput.x != 0 || lookInput.y != 0) {
+            if ((lookInput.x != 0 || lookInput.y != 0) && !camera.isCorrectingRoll()) {
                 camera.updateRotation(lookInput.x * dt * lookSpeed, lookInput.y * dt * lookSpeed);
             }
+            camera.updateRollCorrection(dt);
 
             if (holdingObject != null) {
                 holdingObject.pos = Vector3.add(camera.pos, Vector3.mul(camera.getForward(), holdingDistance));
             }
+            companionCube.updatePhysics(dt);
 
-            let q = Quaternion.buildQuaternionEuler(new Vector3(0, dt * dirLightRotateSpeed, 0));
-            dirLightRotation = Quaternion.multiply(q, dirLightRotation);
-            dirLight.dir = dirLightRotation.rotateVector(dirLightDefaultDir);
+            playerCube.pos = camera.pos;
+            playerCube.rotation = camera.rotation;
+
+            updatePortalTeleports();
         }
 
         function gameObjectToWorldSpaceTriangles() {
             let objectTris = [];
-            objectTris.push(...ground.getTransformedTriangles());
             for (let light of pointLights) {
                 objectTris.push(...light.getTransformedTriangles());
             }
-            objectTris.push(...woodTower.getTransformedTriangles());
+            for (let portal of portals) {
+                objectTris.push(...portal.getAllTransformedTriangles());
+            }
+            for (let gameObject of sceneObjects) {
+                objectTris.push(...gameObject.getTransformedTriangles());
+            }
+
+            let portal1Plane = portal1.getPlane();
+            let portal2Plane = portal2.getPlane();
+
+            for (let gameObject of canInteractWithPortalGameObjects) {
+                let gameObjectTransformedTris = gameObject.getTransformedTriangles();
+
+                if (portal1.isPointDirectlyInFrontOrBackOfPortal(gameObject.pos) && portal1Plane.isIntersectingWithTris(gameObjectTransformedTris)) {
+                    let clonedGameObject = portal1.createCloneObjectOnOtherPortal(gameObject);
+                    objectTris.push(...portal1Plane.clipWithTris(gameObjectTransformedTris));
+                    objectTris.push(...portal2Plane.clipWithTris(clonedGameObject.getTransformedTriangles()));
+                } else if (portal2.isPointDirectlyInFrontOrBackOfPortal(gameObject.pos) && portal2Plane.isIntersectingWithTris(gameObjectTransformedTris)) {
+                    let clonedGameObject = portal2.createCloneObjectOnOtherPortal(gameObject);
+                    objectTris.push(...portal2Plane.clipWithTris(gameObjectTransformedTris));
+                    objectTris.push(...portal1Plane.clipWithTris(clonedGameObject.getTransformedTriangles()));
+                } else {
+                    objectTris.push(...gameObjectTransformedTris);
+                }
+            }
 
             return objectTris;
+        }
+
+        function getRenderSettings() {
+            return {
+                canvasWidth: gameCanvas.width,
+                canvasHeight: gameCanvas.height,
+                projectionMatrix: projectionMatrix,
+                nearPlane: nearPlane,
+                portalLimit: portalLimit,
+                dirLight: dirLight,
+                pointLightIntensity: pointLightIntensity,
+                pointLights: pointLights,
+                pointLightRange: pointLightRange,
+            };
+        }
+
+        function portalRenderOperations(objectTris) {
+            const settings = getRenderSettings();
+            for (let portal of portals) {
+                portal.recursivePortalOperation(camera, objectTris, settings);
+            }
         }
 
         function worldSpaceToViewSpace(objectTris) {
@@ -1891,7 +2517,7 @@
 
         function rasterize(visibleTris) {
             rasterizer.clearScreen();
-            rasterizer.rasterizeClipSpaceTriangles(visibleTris, dirLight, pointLightIntensity, pointLights, pointLightRange, useShadow);
+            rasterizer.rasterizeClipSpaceTriangles(visibleTris, dirLight, pointLightIntensity, pointLights, pointLightRange);
             rasterizer.drawCall(useASCII);
 
             let x = rasterizer.screenCenterX,
@@ -1916,12 +2542,7 @@
 
             updateGameObjectTransforms();
             let objectTris = gameObjectToWorldSpaceTriangles();
-
-            if (useShadow) {
-                dirLight.buildViewAndProjectionMatrix();
-                dirLight.buildShadowMap(objectTris);
-            }
-
+            portalRenderOperations(objectTris);
             let visibleTris = worldSpaceToViewSpace(objectTris);
             sortNearestFirst(visibleTris);
             viewSpaceToClipSpace(visibleTris);
@@ -1932,14 +2553,54 @@
 
         update();
 
+        function shootPortal(index) {
+            if (rasterizer.pointingTri == null) return;
+
+            let normal = rasterizer.pointingPosNormal;
+            let surfacePos = Vector3.add(rasterizer.pointingPos, Vector3.mul(normal, 0.1));
+            let upReference = Math.abs(Vector3.dot(normal, Vector3.up)) >= 0.9 ? camera.getForward() : Vector3.up;
+
+            let portal = portals[index];
+            portal.setRotation(Quaternion.lookRotation(normal, upReference));
+            portal.setPos(surfacePos);
+        }
+
+        function doKeyAction(key) {
+            if (key == "p") {
+                setControllingObject(controllingObject + 1);
+            } else if (key == "g") {
+                companionCube.useGravity = !companionCube.useGravity;
+                if (!companionCube.useGravity) companionCube.velocity = Vector3.zero.clone();
+            } else if (key == "f") {
+                if (holdingObject != null) {
+                    holdingObject.useGravity = false;
+                    holdingObject.velocity = Vector3.zero.clone();
+                    holdingObject = null;
+                } else {
+                    companionCube.useGravity = false;
+                    companionCube.velocity = Vector3.zero.clone();
+                    companionCube.pos = Vector3.add(camera.pos, Vector3.mul(camera.getForward(), holdingDistance));
+                }
+            } else if (key == "e") {
+                if (holdingObject != null) {
+                    holdingObject.velocity = Vector3.mul(camera.getForward(), throwSpeed);
+                    holdingObject = null;
+                    return;
+                }
+
+                let pointingTri = rasterizer.pointingTri;
+                if (pointingTri == null || pointingTri.gameObject == null) return;
+                if (!pointingTri.gameObject.isHoldable) return;
+
+                holdingObject = pointingTri.gameObject;
+                holdingObject.velocity = Vector3.zero.clone();
+                holdingObject.useGravity = false;
+            }
+        }
+
         lightDirIntensitySlider.addEventListener("input", () => {
             dirLight.intensity = parseFloat(lightDirIntensitySlider.value);
             lightDirIntensityText.textContent = dirLight.intensity.toFixed(2);
-        });
-
-        lightDirRotateSpeedSlider.addEventListener("input", () => {
-            dirLightRotateSpeed = parseFloat(lightDirRotateSpeedSlider.value);
-            lightDirRotateSpeedText.textContent = dirLightRotateSpeed.toFixed(2);
         });
 
         pointLightIntensitySlider.addEventListener("input", () => {
@@ -1952,8 +2613,9 @@
             pointLightRangeText.textContent = pointLightRange.toFixed(0);
         });
 
-        shadowCheckbox.addEventListener("change", () => {
-            useShadow = shadowCheckbox.checked;
+        portalLimitInput.addEventListener("input", () => {
+            let value = parseInt(portalLimitInput.value);
+            if (!isNaN(value)) portalLimit = Math.max(0, Math.min(50, value));
         });
 
         function readResolution(input, min, max, current) {
@@ -1968,6 +2630,9 @@
 
             projectionMatrix = Mat4x4.Projection(fov, gameCanvas.height, gameCanvas.width, znear, zfar);
             rasterizer.resize(gameCanvas.width, gameCanvas.height);
+            for (let portal of portals) {
+                portal.resize(gameCanvas.width, gameCanvas.height);
+            }
         }
 
         function applyCanvasResolution() {
@@ -2006,12 +2671,21 @@
             if (document.pointerLockElement !== renderDiv) requestMouseLook();
         });
 
+        document.addEventListener("mousedown", (e) => {
+            if (document.pointerLockElement !== renderDiv) return;
+            if (e.button == 0) {
+                shootPortal(0);
+            } else if (e.button == 2) {
+                shootPortal(1);
+            }
+        });
+
         document.addEventListener("contextmenu", (e) => {
             if (document.pointerLockElement === renderDiv) e.preventDefault();
         });
 
         document.addEventListener("mousemove", (e) => {
-            if (document.pointerLockElement === renderDiv) {
+            if (document.pointerLockElement === renderDiv && !camera.isCorrectingRoll()) {
                 camera.updateRotation(e.movementX, e.movementY);
             }
         });
@@ -2038,20 +2712,7 @@
             keyStates[e.key] = false;
         });
         window.addEventListener("keypress", (e) => {
-            if (e.key == "p") {
-                setControllingObject(controllingObject + 1);
-            } else if (e.key == "e") {
-                if (holdingObject != null) {
-                    holdingObject = null;
-                    return;
-                }
-
-                let pointingTri = rasterizer.pointingTri;
-                if (pointingTri == null || pointingTri.gameObject == null) return;
-                if (!pointingTri.gameObject.isHoldable) return;
-
-                holdingObject = pointingTri.gameObject;
-            }
+            doKeyAction(e.key);
         });
 
         mobileControlsButton.addEventListener("click", () => {
@@ -2082,6 +2743,26 @@
             };
             button.addEventListener("pointerup", release);
             button.addEventListener("pointercancel", release);
+        });
+
+        const tapButtons = mobileControls.querySelectorAll("button[data-tap]");
+        tapButtons.forEach((button) => {
+            if (!button.dataset.tap) return;
+            const key = button.dataset.tap;
+            button.addEventListener("click", () => {
+                doKeyAction(key);
+                button.blur();
+            });
+        });
+
+        const portalButtons = mobileControls.querySelectorAll("button[data-portal]");
+        portalButtons.forEach((button) => {
+            if (!button.dataset.portal) return;
+            const index = parseInt(button.dataset.portal);
+            button.addEventListener("click", () => {
+                shootPortal(index);
+                button.blur();
+            });
         });
 
         const lookButtons = mobileControls.querySelectorAll("button[data-look]");
