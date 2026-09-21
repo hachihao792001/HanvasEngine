@@ -4,13 +4,14 @@
 <head>
     <meta charset="UTF-8" />
     <link rel="stylesheet" href="./index.css">
-    <title>3D Engine</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Hanvas Engine</title>
 </head>
 
-<body style="text-align: center; background: #f0f0f0">
-    <h1>3D Engine</h1>
+<body>
+    <h1>Hanvas Engine</h1>
     <div id="render">
-        <canvas id="gameCanvas" width="400" height="300" style="border: 2px solid #aaa; background: #fff"></canvas>
+        <canvas id="gameCanvas" width="600" height="450" style="border: 2px solid #aaa; background: #fff"></canvas>
         <p id="asciiParagraph"
             style="display:none; font-size: 2px; font-family: 'Courier New', Courier, monospace;letter-spacing: 1px; line-height: 2px; white-space: pre;">
         </p>
@@ -63,9 +64,9 @@
         <div class="controlRow" id="canvasResRow">
             <label class="controlLabel" for="canvasResWidth">Canvas resolution:</label>
             <span>
-                <input id="canvasResWidth" value="400" size="4" />
+                <input id="canvasResWidth" value="600" size="4" />
                 x
-                <input id="canvasResHeight" value="300" size="4" />
+                <input id="canvasResHeight" value="450" size="4" />
             </span>
         </div>
         <div class="controlRow" id="asciiResRow" style="display: none">

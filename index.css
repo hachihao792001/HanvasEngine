@@ -1,3 +1,9 @@
+body {
+    text-align: center;
+    background: #f0f0f0;
+    font-family: 'Bahnschrift', 'Arial Sans-Serif', sans-serif;
+}
+
 #gameCanvas {
     max-width: 100%;
     height: auto;
@@ -86,7 +92,7 @@ input[type="range"] {
     gap: 10px;
 }
 
-#mobileControls > div {
+#mobileControls>div {
     margin-bottom: 8px;
 }
 

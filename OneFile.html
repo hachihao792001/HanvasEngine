@@ -4,6 +4,12 @@
 <head>
     <meta charset="UTF-8" />
     <style>
+        body {
+            text-align: center;
+            background: #f0f0f0;
+            font-family: 'Bahnschrift', 'Arial Sans-Serif', sans-serif;
+        }
+
         #gameCanvas {
             max-width: 100%;
             height: auto;
@@ -92,7 +98,7 @@
             gap: 10px;
         }
 
-        #mobileControls > div {
+        #mobileControls>div {
             margin-bottom: 8px;
         }
 
@@ -120,13 +126,14 @@
             user-select: none;
         }
     </style>
-    <title>3D Engine</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Hanvas Engine</title>
 </head>
 
-<body style="text-align: center; background: #f0f0f0">
-    <h1>3D Engine</h1>
+<body>
+    <h1>Hanvas Engine</h1>
     <div id="render">
-        <canvas id="gameCanvas" width="400" height="300" style="border: 2px solid #aaa; background: #fff"></canvas>
+        <canvas id="gameCanvas" width="600" height="450" style="border: 2px solid #aaa; background: #fff"></canvas>
         <p id="asciiParagraph"
             style="display:none; font-size: 2px; font-family: 'Courier New', Courier, monospace;letter-spacing: 1px; line-height: 2px; white-space: pre;">
         </p>
@@ -179,9 +186,9 @@
         <div class="controlRow" id="canvasResRow">
             <label class="controlLabel" for="canvasResWidth">Canvas resolution:</label>
             <span>
-                <input id="canvasResWidth" value="400" size="4" />
+                <input id="canvasResWidth" value="600" size="4" />
                 x
-                <input id="canvasResHeight" value="300" size="4" />
+                <input id="canvasResHeight" value="450" size="4" />
             </span>
         </div>
         <div class="controlRow" id="asciiResRow" style="display: none">
@@ -819,7 +826,7 @@
         }
 
         class Texture {
-            constructor(url) {
+            constructor(url = "") {
                 this.pixels = null;
                 this.width = 0;
                 this.height = 0;
@@ -1716,8 +1723,8 @@
         let useASCII = false;
         let asciiWidth = 260;
         let asciiHeight = 195;
-        let canvasRenderWidth = 400;
-        let canvasRenderHeight = 300;
+        let canvasRenderWidth = 600;
+        let canvasRenderHeight = 450;
 
         canvasResWidthInput.value = canvasRenderWidth.toString();
         canvasResHeightInput.value = canvasRenderHeight.toString();
@@ -2000,7 +2007,11 @@
                     unadjustedMovement: true,
                 });
             } catch (e) {
-                // mobile
+                try {
+                    await renderDiv.requestPointerLock();
+                } catch (fallbackError) {
+                    // mobile
+                }
             }
         }
 

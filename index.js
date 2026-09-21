@@ -32,8 +32,8 @@ const asciiResHeightInput = /** @type {HTMLInputElement} */ (document.getElement
 let useASCII = false;
 let asciiWidth = 260;
 let asciiHeight = 195;
-let canvasRenderWidth = 400;
-let canvasRenderHeight = 300;
+let canvasRenderWidth = 600;
+let canvasRenderHeight = 450;
 
 canvasResWidthInput.value = canvasRenderWidth.toString();
 canvasResHeightInput.value = canvasRenderHeight.toString();
