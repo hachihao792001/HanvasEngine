@@ -685,7 +685,11 @@ async function requestMouseLook() {
             unadjustedMovement: true,
         });
     } catch (e) {
-        // mobile
+        try {
+            await renderDiv.requestPointerLock();
+        } catch (fallbackError) {
+            // mobile
+        }
     }
 }
 
