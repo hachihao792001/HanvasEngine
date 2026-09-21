@@ -3,13 +3,43 @@
 
 <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Portal in ASCII - a CPU rasterizer in one HTML file</title>
+    <meta name="description"
+        content="Working Portal mechanics with recursive portal rendering, on a software rasterizer written from scratch. No WebGL, no dependencies, one HTML file. Includes an ASCII mode." />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Portal in ASCII - a CPU rasterizer in one HTML file" />
+    <meta property="og:description"
+        content="Working Portal mechanics with recursive portal rendering, on a software rasterizer written from scratch. No WebGL, no dependencies, one HTML file. Includes an ASCII mode." />
+    <meta property="og:url" content="https://hachihao792001.github.io/interactives/portal.html" />
+    <meta property="og:image" content="https://hachihao792001.github.io/interactives/portal-preview.jpg" />
+    <meta property="og:site_name" content="Hà Chí Hào" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt"
+        content="A Portal-style corridor rendered by a software rasterizer, with two portals facing each other producing an infinite recursive tunnel." />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Portal in ASCII - a CPU rasterizer in one HTML file" />
+    <meta name="twitter:description"
+        content="Working Portal mechanics with recursive portal rendering, on a software rasterizer written from scratch. No WebGL, no dependencies, one HTML file. Includes an ASCII mode." />
+    <meta name="twitter:image" content="https://hachihao792001.github.io/interactives/portal-preview.jpg" />
     <style>
+        body {
+            text-align: center;
+            background: #f0f0f0;
+            font-family: 'Bahnschrift', 'Arial Sans-Serif', sans-serif;
+        }
+
         #gameCanvas {
             max-width: 100%;
             height: auto;
         }
 
-        #fps{
+        #fps {
             margin: 3px;
         }
 
@@ -96,7 +126,7 @@
             gap: 10px;
         }
 
-        #mobileControls > div {
+        #mobileControls>div {
             margin-bottom: 8px;
         }
 
@@ -127,11 +157,13 @@
 
         #mobileControls .portal-button.orange {
             background: #ffc95e;
+            border: 0px;
         }
 
         #mobileControls .portal-button.blue {
             background: #119bff;
             color: #fff;
+            border: 0px;
         }
 
         #mobileControls button {
@@ -146,12 +178,10 @@
             user-select: none;
         }
     </style>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>3D Engine</title>
 </head>
 
-<body style="text-align: center; background: #f0f0f0">
-    <h1>3D Engine</h1>
+<body>
+    <h1>Portal mechanic + CPU rasterizer, in one HTML file</h1>
     <div id="render">
         <canvas id="gameCanvas" width="800" height="600" style="border: 2px solid #aaa; background: #fff"></canvas>
         <p id="asciiParagraph"
@@ -164,7 +194,8 @@
     <h2 id="fps">FPS: 0</h2>
     <div>
         <button id="helpButton"
-            style="font-family: inherit;font-size: 15px;height: 30px;padding: 0 16px;margin-top: 0px">Help and credits</button>
+            style="font-family: inherit;font-size: 15px;height: 30px;padding: 0 16px;margin-top: 0px">Help and
+            credits</button>
         <button id="mobileControlsButton"
             style="font-family: inherit;font-size: 15px;height: 30px;padding: 0 16px;margin-top: 0px">Mobile
             controls</button>
@@ -2665,7 +2696,11 @@
                     unadjustedMovement: true,
                 });
             } catch (e) {
-                // mobile
+                try {
+                    await renderDiv.requestPointerLock();
+                } catch (fallbackError) {
+                    // mobile
+                }
             }
         }
 

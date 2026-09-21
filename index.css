@@ -9,7 +9,7 @@ body {
     height: auto;
 }
 
-#fps{
+#fps {
     margin: 3px;
 }
 
@@ -127,11 +127,13 @@ input[type="range"] {
 
 #mobileControls .portal-button.orange {
     background: #ffc95e;
+    border: 0px;
 }
 
 #mobileControls .portal-button.blue {
     background: #119bff;
     color: #fff;
+    border: 0px;
 }
 
 #mobileControls button {
