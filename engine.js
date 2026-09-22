@@ -8,6 +8,277 @@ let ambientLight = 0.2;
 let gravity = 9.8;
 let terminalVelocity = 50;
 
+export class Transform {
+    /**
+     * @param {Vector3} [localPosition]
+     * @param {Vector3} [localEulerAngles]
+     * @param {Vector3} [localScale]
+     * @param {string} [name]
+     */
+    constructor(localPosition = Vector3.zero.clone(), localEulerAngles = Vector3.zero.clone(), localScale = Vector3.one.clone(), name = "Transform") {
+        this.localPosition = localPosition;
+        this.localRotation = Quaternion.buildQuaternionEuler(localEulerAngles);
+        this.localScale = localScale;
+        this.name = name;
+
+        /** @type {Transform | null} */
+        this._parent = null;
+        /** @type {Transform[]} */
+        this._children = [];
+        /** @type {GameObject | null} */
+        this.gameObject = null;
+    }
+
+    // ---------------------------------------------------------------- hierarchy
+
+    /** @returns {Transform | null} */
+    get parent() {
+        return this._parent;
+    }
+
+    /** @param {Transform | null} parent */
+    set parent(parent) {
+        this.setParent(parent);
+    }
+
+    get children() {
+        return this._children;
+    }
+
+    get childCount() {
+        return this._children.length;
+    }
+
+    get root() {
+        /** @type {Transform} */
+        let current = this;
+        while (current._parent != null) {
+            current = current._parent;
+        }
+        return current;
+    }
+
+    /**
+     * @param {Transform | null} parent
+     * @param {boolean} [worldPositionStays]
+     */
+    setParent(parent, worldPositionStays = true) {
+        if (parent === this._parent) return;
+        if (parent != null && parent.isChildOf(this)) {
+            console.warn("Cannot parent " + this.name + " to " + parent.name + ": that would make a cycle");
+            return;
+        }
+
+        let worldPosition = this.position;
+        let worldRotation = this.rotation;
+        let worldScale = this.lossyScale;
+
+        // detach old parent
+        if (this._parent != null) {
+            let index = this._parent._children.indexOf(this);
+            if (index >= 0) this._parent._children.splice(index, 1);
+        }
+
+        this._parent = parent;
+        if (parent != null) parent._children.push(this);
+
+        if (worldPositionStays) {
+            this.position = worldPosition;
+            this.rotation = worldRotation;
+            let parentScale = parent != null ? parent.lossyScale : Vector3.one;
+            this.localScale = new Vector3(worldScale.x / parentScale.x, worldScale.y / parentScale.y, worldScale.z / parentScale.z);
+        }
+    }
+
+    /**
+     * @param {Transform} parent
+     */
+    isChildOf(parent) {
+        /** @type {Transform | null} */
+        let current = this;
+        while (current != null) {
+            if (current === parent) return true;
+            current = current._parent;
+        }
+        return false;
+    }
+
+    /** @param {number} index */
+    getChild(index) {
+        return this._children[index];
+    }
+
+    /** re-parent every child to this transform's own parent */
+    detachChildren() {
+        for (let child of this._children.slice()) {
+            child.setParent(this._parent);
+        }
+    }
+
+    // ------------------------------------------------------------- world space
+
+    /** @returns {Vector3} */
+    get position() {
+        if (this._parent == null) return this.localPosition;
+        return this._parent.transformPoint(this.localPosition);
+    }
+
+    /** @param {Vector3} worldPosition */
+    set position(worldPosition) {
+        this.localPosition = this._parent == null ? worldPosition : this._parent.inverseTransformPoint(worldPosition);
+    }
+
+    /** @returns {Quaternion} */
+    get rotation() {
+        if (this._parent == null) return this.localRotation;
+        return Quaternion.multiply(this._parent.rotation, this.localRotation);
+    }
+
+    /** @param {Quaternion} worldRotation */
+    set rotation(worldRotation) {
+        this.localRotation = this._parent == null ? worldRotation : Quaternion.multiply(this._parent.rotation.conjugate(), worldRotation);
+    }
+
+    /**
+     * @returns {Vector3}
+     */
+    get lossyScale() {
+        if (this._parent == null) return this.localScale;
+        return Vector3.scale(this._parent.lossyScale, this.localScale);
+    }
+
+    // ------------------------------------------------------------------ basics
+
+    /** a copy of the local pose, without the parent or the children */
+    clone() {
+        let t = new Transform(this.localPosition.clone(), Vector3.zero, this.localScale.clone(), this.name);
+        t.localRotation = new Quaternion(this.localRotation.a, this.localRotation.b, this.localRotation.c, this.localRotation.d);
+        return t;
+    }
+
+    getForward() {
+        return this.rotation.rotateVector(Vector3.forward).normalize();
+    }
+
+    getRight() {
+        return this.rotation.rotateVector(Vector3.right).normalize();
+    }
+
+    getUp() {
+        return this.rotation.rotateVector(Vector3.up).normalize();
+    }
+
+    /**
+     * @param {Vector3} offset
+     */
+    translate(offset) {
+        this.position = Vector3.add(this.position, offset);
+    }
+
+    /**
+     * @param {Vector3} offset
+     */
+    translateLocal(offset) {
+        this.position = Vector3.add(this.position, this.rotation.rotateVector(offset));
+    }
+
+    /**
+     * @param {number} eulerX
+     * @param {number} eulerY
+     * @param {number} eulerZ
+     */
+    rotate(eulerX, eulerY, eulerZ) {
+        let q = Quaternion.buildQuaternionEuler(new Vector3(eulerX, eulerY, eulerZ));
+        this.rotation = Quaternion.multiply(q, this.rotation);
+    }
+
+    /**
+     * @param {Vector3} axis
+     * @param {number} angle in degrees
+     */
+    rotateAround(axis, angle) {
+        this.rotation = Quaternion.multiply(Quaternion.buildQuaternionAxisAngle(axis, angle), this.rotation);
+    }
+
+    /** @param {Vector3} eulerAngles */
+    setEulerAngles(eulerAngles) {
+        this.rotation = Quaternion.buildQuaternionEuler(eulerAngles);
+    }
+
+    /** @param {Vector3} eulerAngles */
+    setLocalEulerAngles(eulerAngles) {
+        this.localRotation = Quaternion.buildQuaternionEuler(eulerAngles);
+    }
+
+    /**
+     * @param {Vector3} forward
+     * @param {Vector3} [up]
+     */
+    lookRotation(forward, up = Vector3.up) {
+        this.rotation = Quaternion.lookRotation(forward, up);
+    }
+
+    /**
+     * @param {Vector3} target
+     * @param {Vector3} [up]
+     */
+    lookAt(target, up = Vector3.up) {
+        this.lookRotation(Vector3.sub(target, this.position).normalize(), up);
+    }
+
+    // ---------------------------------------------------------------- matrices
+
+    getScaleMatrix() {
+        let scale = this.lossyScale;
+        return Mat4x4.Scale(scale.x, scale.y, scale.z);
+    }
+
+    getTranslationMatrix() {
+        let position = this.position;
+        return Mat4x4.Translation(position.x, position.y, position.z);
+    }
+
+    getViewMatrix() {
+        return Mat4x4.ViewFromPosRot(this.position, this.rotation);
+    }
+
+    // ------------------------------------------------------- space conversions
+
+    /**
+     * world space point -> this transform's local space
+     * @param {Vector3} point
+     */
+    inverseTransformPoint(point) {
+        let local = this.rotation.inverseRotateVector(Vector3.sub(point, this.position));
+        let scale = this.lossyScale;
+        return new Vector3(local.x / scale.x, local.y / scale.y, local.z / scale.z);
+    }
+
+    /**
+     * this transform's local space point -> world space
+     * @param {Vector3} point
+     */
+    transformPoint(point) {
+        return Vector3.add(this.position, this.rotation.rotateVector(Vector3.scale(point, this.lossyScale)));
+    }
+
+    /**
+     * local space direction -> world space (ignores scale and position)
+     * @param {Vector3} direction
+     */
+    transformDirection(direction) {
+        return this.rotation.rotateVector(direction);
+    }
+
+    /**
+     * world space direction -> local space (ignores scale and position)
+     * @param {Vector3} direction
+     */
+    inverseTransformDirection(direction) {
+        return this.rotation.inverseRotateVector(direction);
+    }
+}
+
 export class Camera {
     static maxPitch = 89.9;
     /**
@@ -17,13 +288,12 @@ export class Camera {
      * @param {number} sensitivity
      */
     constructor(pos, euler, speed, sensitivity) {
-        this.pos = pos;
-        this.rotation = Quaternion.buildQuaternionEuler(euler);
+        this.transform = new Transform(pos, euler);
         this.speed = speed;
         this.sensitivity = sensitivity;
 
-        this.rotLerpStart = this.rotation;
-        this.rotLerpEnd = this.rotation;
+        this.rotLerpStart = this.transform.rotation;
+        this.rotLerpEnd = this.transform.rotation;
         this.rotLerpDuration = 0.2;
         this.rotLerpCount = 0;
     }
@@ -33,7 +303,7 @@ export class Camera {
      * @param {number} mouseMovementY
      */
     updateRotation(mouseMovementX, mouseMovementY) {
-        let rotation = Quaternion.multiply(Quaternion.buildQuaternionAxisAngle(Vector3.up, -mouseMovementX * this.sensitivity), this.rotation);
+        let rotation = Quaternion.multiply(Quaternion.buildQuaternionAxisAngle(Vector3.up, -mouseMovementX * this.sensitivity), this.transform.rotation);
 
         let pitchAngle = -mouseMovementY * this.sensitivity;
         let forwardY = rotation.rotateVector(Vector3.forward).y;
@@ -41,7 +311,7 @@ export class Camera {
         pitchAngle = Math.max(-Camera.maxPitch - currentPitch, Math.min(Camera.maxPitch - currentPitch, pitchAngle));
 
         let right = rotation.rotateVector(Vector3.right);
-        this.rotation = Quaternion.multiply(Quaternion.buildQuaternionAxisAngle(right, pitchAngle), rotation);
+        this.transform.rotation = Quaternion.multiply(Quaternion.buildQuaternionAxisAngle(right, pitchAngle), rotation);
     }
 
     /**
@@ -49,37 +319,32 @@ export class Camera {
      * @param {Record<string, boolean>} keyStates
      */
     updateMovement(dt, keyStates) {
-        let forward = this.getForward();
-        let right = this.rotation.rotateVector(Vector3.right);
+        let forward = this.transform.getForward();
+        let right = this.transform.getRight();
+        let step = dt * this.speed;
 
         if (keyStates["w"]) {
-            this.pos = Vector3.add(this.pos, Vector3.mul(forward, dt * this.speed));
+            this.transform.translate(Vector3.mul(forward, step));
         }
         if (keyStates["s"]) {
-            this.pos = Vector3.sub(this.pos, Vector3.mul(forward, dt * this.speed));
+            this.transform.translate(Vector3.mul(forward, -step));
         }
         if (keyStates["a"]) {
-            this.pos = Vector3.sub(this.pos, Vector3.mul(right, dt * this.speed));
+            this.transform.translate(Vector3.mul(right, -step));
         }
         if (keyStates["d"]) {
-            this.pos = Vector3.add(this.pos, Vector3.mul(right, dt * this.speed));
+            this.transform.translate(Vector3.mul(right, step));
         }
         if (keyStates["Shift"]) {
-            this.pos = Vector3.add(this.pos, Vector3.mul(Vector3.down, dt * this.speed));
+            this.transform.translate(Vector3.mul(Vector3.down, step));
         }
         if (keyStates[" "]) {
-            this.pos = Vector3.add(this.pos, Vector3.mul(Vector3.up, dt * this.speed));
+            this.transform.translate(Vector3.mul(Vector3.up, step));
         }
-    }
-
-    getForward() {
-        let res = this.rotation.rotateVector(Vector3.forward);
-        res.normalize();
-        return res;
     }
 
     getViewMatrix() {
-        return Mat4x4.ViewFromPosRot(this.pos, this.rotation);
+        return this.transform.getViewMatrix();
     }
 
     /**
@@ -87,8 +352,8 @@ export class Camera {
      * @param {Quaternion} newRot
      */
     updateTransformAndCorrectRoll(newPos, newRot) {
-        this.pos = newPos;
-        this.rotation = newRot;
+        this.transform.position = newPos;
+        this.transform.rotation = newRot;
 
         let newForward = newRot.rotateVector(Vector3.forward).normalize();
         if (Math.abs(Vector3.dot(newForward, Vector3.up)) > 0.999) return;
@@ -109,9 +374,9 @@ export class Camera {
     updateRollCorrection(dt) {
         if (this.rotLerpCount <= 0) return;
 
-        this.rotation = Quaternion.lerp(this.rotLerpStart, this.rotLerpEnd, (this.rotLerpDuration - this.rotLerpCount) / this.rotLerpDuration);
+        this.transform.rotation = Quaternion.lerp(this.rotLerpStart, this.rotLerpEnd, (this.rotLerpDuration - this.rotLerpCount) / this.rotLerpDuration);
         this.rotLerpCount -= dt;
-        if (this.rotLerpCount <= 0) this.rotation = this.rotLerpEnd;
+        if (this.rotLerpCount <= 0) this.transform.rotation = this.rotLerpEnd;
     }
 }
 
@@ -130,9 +395,8 @@ export class GameObject {
     constructor(pos, eulerAngles, scale, color, mesh, texture = null, name = "") {
         this.id = GameObject.incrementingID++;
         this.name = name || `GameObject ${this.id}`;
-        this.pos = pos;
-        this.scale = scale;
-        this.rotation = Quaternion.buildQuaternionEuler(eulerAngles);
+        this.transform = new Transform(pos, eulerAngles, scale, this.name);
+        this.transform.gameObject = this;
         this.color = color;
         this.mesh = mesh;
         this.texture = texture;
@@ -142,17 +406,12 @@ export class GameObject {
     }
 
     /**
-     * @param {number} eulerX
-     * @param {number} eulerY
-     * @param {number} eulerZ
+     * parent this object's transform under another object, keeping its world pose
+     * @param {GameObject | null} parent
+     * @param {boolean} [worldPositionStays]
      */
-    rotate(eulerX, eulerY, eulerZ) {
-        let q = Quaternion.buildQuaternionEuler(new Vector3(eulerX, eulerY, eulerZ));
-        this.rotation = Quaternion.multiply(q, this.rotation);
-    }
-
-    getForward() {
-        return this.rotation.rotateVector(Vector3.forward);
+    setParent(parent, worldPositionStays = true) {
+        this.transform.setParent(parent != null ? parent.transform : null, worldPositionStays);
     }
 
     /** @returns {Triangle[]} */
@@ -161,14 +420,28 @@ export class GameObject {
         let transformedTris = [];
         for (let tri of this.mesh.tris) {
             let transformedTri = tri.clone();
-            transformedTri.mulMat4x4(Mat4x4.Scale(this.scale.x, this.scale.y, this.scale.z));
-            transformedTri.rotate(this.rotation);
-            transformedTri.mulMat4x4(Mat4x4.Translation(this.pos.x, this.pos.y, this.pos.z));
+            transformedTri.mulMat4x4(this.transform.getScaleMatrix());
+            transformedTri.rotate(this.transform.rotation);
+            transformedTri.mulMat4x4(this.transform.getTranslationMatrix());
             transformedTri.updateWorldVertices();
             transformedTri.texture = this.texture;
             transformedTri.color = this.color;
             transformedTri.gameObject = this;
             transformedTris.push(transformedTri);
+        }
+        return transformedTris;
+    }
+
+    /**
+     * this object's triangles plus every descendant's, so parenting is enough to get a child drawn
+     * @returns {Triangle[]}
+     */
+    getTransformedTrianglesWithChildren() {
+        let transformedTris = this.getTransformedTriangles();
+        for (let child of this.transform.children) {
+            if (child.gameObject != null) {
+                transformedTris.push(...child.gameObject.getTransformedTrianglesWithChildren());
+            }
         }
         return transformedTris;
     }
@@ -181,7 +454,7 @@ export class GameObject {
                 this.velocity = Vector3.mul(this.velocity.normalize(), terminalVelocity);
             }
         }
-        this.pos = Vector3.add(this.pos, Vector3.mul(this.velocity, dt));
+        this.transform.translate(Vector3.mul(this.velocity, dt));
     }
 }
 

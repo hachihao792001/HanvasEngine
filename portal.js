@@ -22,7 +22,7 @@ import { Camera, GameObject, Rasterizer } from "./engine.js";
 const portalEdgeCubeMesh = new Cube();
 const portalBackQuadMesh = new Quad();
 
-export class Portal {
+export class Portal extends GameObject {
     static edgeThickness = 0.1;
 
     /**
@@ -36,16 +36,15 @@ export class Portal {
      * @param {CanvasRenderingContext2D} ctx
      */
     constructor(name, pos, eulerAngles, scale, color, canvasWidth, canvasHeight, ctx) {
-        this.name = name;
-        this.pos = pos;
-        this.rotation = Quaternion.buildQuaternionEuler(eulerAngles);
-        this.scale = scale;
+        super(pos, eulerAngles, scale, color, new Quad(), null, name);
+        for (let tri of this.mesh.tris) {
+            tri.portal = this;
+        }
 
         this.renderTexture = new Texture();
         this.rasterizer = new Rasterizer(canvasWidth, canvasHeight, ctx);
         this.resize(canvasWidth, canvasHeight);
 
-        this.quad = new GameObject(pos, eulerAngles, scale, color, new Quad(this), null, name);
         this.camera = new Camera(pos, eulerAngles, 8, 0.2);
 
         /** @type {Portal} */
@@ -56,10 +55,10 @@ export class Portal {
         this.lastFrameGameObjectInFrontOfPortal = new Map();
 
         const edgeThickness = Portal.edgeThickness;
-        let portalBack = this.rotation.rotateVector(Vector3.back).normalize();
+        let portalBack = this.transform.rotation.rotateVector(Vector3.back).normalize();
         let backOffset = Vector3.mul(portalBack, edgeThickness / 2);
-        let portalUp = this.rotation.rotateVector(Vector3.up);
-        let portalRight = this.rotation.rotateVector(Vector3.right);
+        let portalUp = this.transform.rotation.rotateVector(Vector3.up);
+        let portalRight = this.transform.rotation.rotateVector(Vector3.right);
 
         this.topCube = new GameObject(
             Vector3.add(pos, Vector3.add(Vector3.mul(portalUp, scale.y / 2 + edgeThickness / 2), backOffset)),
@@ -67,6 +66,8 @@ export class Portal {
             new Vector3(scale.x, edgeThickness, edgeThickness),
             color,
             portalEdgeCubeMesh,
+            null,
+            name + " top",
         );
         this.bottomCube = new GameObject(
             Vector3.add(pos, Vector3.add(Vector3.mul(portalUp, -scale.y / 2 - edgeThickness / 2), backOffset)),
@@ -74,6 +75,8 @@ export class Portal {
             new Vector3(scale.x, edgeThickness, edgeThickness),
             color,
             portalEdgeCubeMesh,
+            null,
+            name + " bottom",
         );
         this.leftCube = new GameObject(
             Vector3.add(pos, Vector3.add(Vector3.mul(portalRight, -scale.x / 2 - edgeThickness / 2), backOffset)),
@@ -81,6 +84,8 @@ export class Portal {
             new Vector3(edgeThickness, scale.y + edgeThickness * 2, edgeThickness),
             color,
             portalEdgeCubeMesh,
+            null,
+            name + " left",
         );
         this.rightCube = new GameObject(
             Vector3.add(pos, Vector3.add(Vector3.mul(portalRight, scale.x / 2 + edgeThickness / 2), backOffset)),
@@ -88,6 +93,8 @@ export class Portal {
             new Vector3(edgeThickness, scale.y + edgeThickness * 2, edgeThickness),
             color,
             portalEdgeCubeMesh,
+            null,
+            name + " right",
         );
 
         this.backQuad = new GameObject(
@@ -96,8 +103,17 @@ export class Portal {
             new Vector3(scale.x, scale.y, 0.05),
             color,
             portalBackQuadMesh,
+            null,
+            name + " back",
         );
-        this.backQuad.rotation = Quaternion.multiply(Quaternion.buildQuaternionAxisAngle(portalUp, 180), this.backQuad.rotation);
+        this.backQuad.transform.rotation = Quaternion.multiply(
+            Quaternion.buildQuaternionAxisAngle(portalUp, 180),
+            this.backQuad.transform.rotation,
+        );
+
+        for (let framePart of [this.topCube, this.bottomCube, this.leftCube, this.rightCube, this.backQuad]) {
+            framePart.setParent(this);
+        }
     }
 
     /**
@@ -116,77 +132,15 @@ export class Portal {
         this.otherPortal = otherPortal;
     }
 
-    /** @returns {Triangle[]} */
-    getAllTransformedTriangles() {
-        /** @type {Triangle[]} */
-        let allTris = [];
-        allTris.push(...this.quad.getTransformedTriangles());
-        allTris.push(...this.topCube.getTransformedTriangles());
-        allTris.push(...this.bottomCube.getTransformedTriangles());
-        allTris.push(...this.leftCube.getTransformedTriangles());
-        allTris.push(...this.rightCube.getTransformedTriangles());
-        allTris.push(...this.backQuad.getTransformedTriangles());
-        return allTris;
-    }
-
     getPlane() {
-        let forward = this.rotation.rotateVector(Vector3.forward);
-        return new Plane(forward, Vector3.sub(this.pos, Vector3.mul(forward, 0.01)));
-    }
-
-    /** @param {Vector3} pos */
-    setPos(pos) {
-        this.pos = pos;
-        this.quad.pos = pos;
-
-        const edgeThickness = Portal.edgeThickness;
-        let portalBack = this.rotation.rotateVector(Vector3.back).normalize();
-        let backOffset = Vector3.mul(portalBack, edgeThickness / 2);
-
-        let portalUp = this.rotation.rotateVector(Vector3.up);
-        this.topCube.pos = Vector3.add(pos, Vector3.add(Vector3.mul(portalUp, this.scale.y / 2 + edgeThickness / 2), backOffset));
-        this.bottomCube.pos = Vector3.add(pos, Vector3.add(Vector3.mul(portalUp, -this.scale.y / 2 - edgeThickness / 2), backOffset));
-
-        let portalRight = this.rotation.rotateVector(Vector3.right);
-        this.leftCube.pos = Vector3.add(pos, Vector3.add(Vector3.mul(portalRight, -this.scale.x / 2 - edgeThickness / 2), backOffset));
-        this.rightCube.pos = Vector3.add(pos, Vector3.add(Vector3.mul(portalRight, this.scale.x / 2 + edgeThickness / 2), backOffset));
-
-        this.backQuad.pos = Vector3.add(pos, Vector3.mul(portalBack, edgeThickness));
-    }
-
-    /** @param {Quaternion} newRotation */
-    setRotation(newRotation) {
-        let parts = [this.quad, this.topCube, this.bottomCube, this.leftCube, this.rightCube];
-        for (let part of parts) {
-            part.rotation = newRotation;
-        }
-        let newUp = newRotation.rotateVector(Vector3.up);
-        this.backQuad.rotation = Quaternion.multiply(Quaternion.buildQuaternionAxisAngle(newUp, 180), newRotation);
-        this.rotation = newRotation;
-    }
-
-    /**
-     * @param {number} eulerX
-     * @param {number} eulerY
-     * @param {number} eulerZ
-     */
-    rotate(eulerX, eulerY, eulerZ) {
-        let q = Quaternion.buildQuaternionEuler(new Vector3(eulerX, eulerY, eulerZ));
-        this.rotation = Quaternion.multiply(q, this.rotation);
-        this.quad.rotate(eulerX, eulerY, eulerZ);
-        this.topCube.rotate(eulerX, eulerY, eulerZ);
-        this.bottomCube.rotate(eulerX, eulerY, eulerZ);
-        this.leftCube.rotate(eulerX, eulerY, eulerZ);
-        this.rightCube.rotate(eulerX, eulerY, eulerZ);
-        this.backQuad.rotate(eulerX, eulerY, eulerZ);
+        let forward = this.transform.getForward();
+        return new Plane(forward, Vector3.sub(this.transform.position, Vector3.mul(forward, 0.01)));
     }
 
     /** @param {Vector3} point */
     isPointDirectlyInFrontOrBackOfPortal(point) {
-        let worldPointRelativeToThisPortal = Vector3.sub(point, this.pos);
-        let localPointRelativeToThisPortal = this.rotation.inverseRotateVector(worldPointRelativeToThisPortal);
-
-        return Math.abs(localPointRelativeToThisPortal.x) <= this.scale.x / 2 && Math.abs(localPointRelativeToThisPortal.y) <= this.scale.y / 2;
+        let localPoint = this.transform.inverseTransformPoint(point);
+        return Math.abs(localPoint.x) <= 0.5 && Math.abs(localPoint.y) <= 0.5;
     }
 
     /**
@@ -195,17 +149,17 @@ export class Portal {
      * @returns {[Vector3, Quaternion]}
      */
     calculateTransformToOtherPortalTransform(position, rotation) {
-        let otherPortalUp = this.otherPortal.rotation.rotateVector(Vector3.up).normalize();
+        let otherPortalUp = this.otherPortal.transform.rotation.rotateVector(Vector3.up).normalize();
         let rotate180 = Quaternion.buildQuaternionAxisAngle(otherPortalUp, 180);
 
-        let worldPositionRelativeToThisPortal = Vector3.sub(position, this.pos);
-        let localPositionRelativeToThisPortal = this.rotation.inverseRotateVector(worldPositionRelativeToThisPortal);
-        let worldPositionRelativeToOtherPortal = this.otherPortal.rotation.rotateVector(localPositionRelativeToThisPortal);
-        let newPos = Vector3.add(this.otherPortal.pos, rotate180.rotateVector(worldPositionRelativeToOtherPortal));
+        let worldPositionRelativeToThisPortal = Vector3.sub(position, this.transform.position);
+        let localPositionRelativeToThisPortal = this.transform.rotation.inverseRotateVector(worldPositionRelativeToThisPortal);
+        let worldPositionRelativeToOtherPortal = this.otherPortal.transform.rotation.rotateVector(localPositionRelativeToThisPortal);
+        let newPos = Vector3.add(this.otherPortal.transform.position, rotate180.rotateVector(worldPositionRelativeToOtherPortal));
 
-        let thisPortalInverseRotation = this.rotation.conjugate();
+        let thisPortalInverseRotation = this.transform.rotation.conjugate();
         let localRotationRelativeToThisPortal = Quaternion.multiply(thisPortalInverseRotation, rotation);
-        let worldRotationRelativeToOtherPortal = Quaternion.multiply(this.otherPortal.rotation, localRotationRelativeToThisPortal);
+        let worldRotationRelativeToOtherPortal = Quaternion.multiply(this.otherPortal.transform.rotation, localRotationRelativeToThisPortal);
         let newRotation = Quaternion.multiply(rotate180, worldRotationRelativeToOtherPortal);
 
         return [newPos, newRotation];
@@ -213,16 +167,16 @@ export class Portal {
 
     /** @param {GameObject} gameObject */
     createCloneObjectOnOtherPortal(gameObject) {
-        let cloneObjectTransform = this.calculateTransformToOtherPortalTransform(gameObject.pos, gameObject.rotation);
+        let cloneObjectTransform = this.calculateTransformToOtherPortalTransform(gameObject.transform.position, gameObject.transform.rotation);
         let cloneObject = new GameObject(
             cloneObjectTransform[0],
             Vector3.zero,
-            gameObject.scale.clone(),
+            gameObject.transform.lossyScale.clone(),
             gameObject.color,
             gameObject.mesh,
             gameObject.texture,
         );
-        cloneObject.rotation = cloneObjectTransform[1];
+        cloneObject.transform.rotation = cloneObjectTransform[1];
         return cloneObject;
     }
 
@@ -232,8 +186,8 @@ export class Portal {
      */
     updatePortalCameraBaseOnPlayer(playerCameraPos, playerCameraRotation) {
         let [cameraPos, cameraRotation] = this.calculateTransformToOtherPortalTransform(playerCameraPos, playerCameraRotation);
-        this.camera.pos = cameraPos;
-        this.camera.rotation = cameraRotation;
+        this.camera.transform.position = cameraPos;
+        this.camera.transform.rotation = cameraRotation;
     }
 
     /**
@@ -267,11 +221,11 @@ export class Portal {
      */
     getGameObjectTeleportedTransformIfGoThroughPortal(gameObject) {
         let wasInFront = this.lastFrameGameObjectInFrontOfPortal.get(gameObject.id) ?? false;
-        let isGameObjectInFrontOfPortal = this.getPlane().isPointInFrontOfPlane(gameObject.pos);
+        let isGameObjectInFrontOfPortal = this.getPlane().isPointInFrontOfPlane(gameObject.transform.position);
         this.lastFrameGameObjectInFrontOfPortal.set(gameObject.id, isGameObjectInFrontOfPortal);
 
-        if (wasInFront && !isGameObjectInFrontOfPortal && this.isPointDirectlyInFrontOrBackOfPortal(gameObject.pos)) {
-            return this.calculateTransformToOtherPortalTransform(gameObject.pos, gameObject.rotation);
+        if (wasInFront && !isGameObjectInFrontOfPortal && this.isPointDirectlyInFrontOrBackOfPortal(gameObject.transform.position)) {
+            return this.calculateTransformToOtherPortalTransform(gameObject.transform.position, gameObject.transform.rotation);
         }
         return null;
     }
@@ -288,7 +242,7 @@ export class Portal {
 
         const viewMatPortal = this.camera.getViewMatrix();
         const otherPortalPlane = this.otherPortal.getPlane();
-        const cameraPos = this.camera.pos;
+        const cameraPos = this.camera.transform.position;
 
         /** @type {Triangle[]} */
         let visibleTris = [];
@@ -343,7 +297,7 @@ export class Portal {
             }
         }
 
-        this.quad.texture = this.renderTexture;
+        this.texture = this.renderTexture;
     }
 
     /**
@@ -359,7 +313,7 @@ export class Portal {
 
         /** @type {Triangle[]} */
         let visibleTris = [];
-        for (let tri of this.quad.getTransformedTriangles()) {
+        for (let tri of this.getTransformedTriangles()) {
             if (Vector3.dot(tri.getNormal(), Vector3.sub(tri.getCenter(), cameraPos)) < 0) {
                 tri.mulMat4x4(viewMatPortal);
                 visibleTris.push(...tri.clipAgainstPlane(settings.nearPlane));
@@ -397,8 +351,8 @@ export class Portal {
      */
     recursivePortalOperation(playerCamera, objectTris, settings) {
         /** @type {[Vector3, Quaternion][]} */
-        let cameraTransforms = [[playerCamera.pos, playerCamera.rotation]];
-        let firstBoundingBox = this.getQuadBoundingBox(playerCamera.pos, playerCamera.rotation, settings);
+        let cameraTransforms = [[playerCamera.transform.position, playerCamera.transform.rotation]];
+        let firstBoundingBox = this.getQuadBoundingBox(playerCamera.transform.position, playerCamera.transform.rotation, settings);
         if (firstBoundingBox == null || !firstBoundingBox.isValid()) return;
 
         let quadBoundingBoxes = [firstBoundingBox];
@@ -415,8 +369,8 @@ export class Portal {
         if (deepest == 0) return;
 
         for (let i = deepest; i >= 1; i--) {
-            this.camera.pos = cameraTransforms[i][0];
-            this.camera.rotation = cameraTransforms[i][1];
+            this.camera.transform.position = cameraTransforms[i][0];
+            this.camera.transform.rotation = cameraTransforms[i][1];
             let textureForPortal = i == deepest ? null : this.renderTexture;
             let clipSpaceTris = this.runRenderPipeline(objectTris, textureForPortal, settings, quadBoundingBoxes[i - 1]);
             this.updateTextureForQuad(clipSpaceTris, settings.canvasWidth, quadBoundingBoxes[i - 1]);

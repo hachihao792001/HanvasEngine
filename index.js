@@ -1,7 +1,7 @@
 import { Vector3, Mat4x4, Quaternion, Plane } from "./math.js";
 import { Cube, Quad, ObjMesh } from "./mesh.js";
 import { Color, Texture } from "./graphics.js";
-import { Camera, GameObject, DirectionalLight, Rasterizer } from "./engine.js";
+import { Camera, Transform, GameObject, DirectionalLight, Rasterizer } from "./engine.js";
 import { Portal } from "./portal.js";
 
 /** @typedef {import("./mesh.js").Triangle} Triangle */
@@ -251,7 +251,7 @@ let sceneObjects = [
 ];
 
 let playerCube = new GameObject(
-    camera.pos,
+    camera.transform.position,
     Vector3.zero,
     new Vector3(0.5, 0.5, 0.5),
     new Color(255, 255, 255),
@@ -259,7 +259,7 @@ let playerCube = new GameObject(
     playerCubeTexture,
     "Player",
 );
-playerCube.rotation = camera.rotation;
+playerCube.transform.rotation = camera.transform.rotation;
 
 let companionCube = new GameObject(
     new Vector3(2, -0.7, 1.2),
@@ -298,29 +298,8 @@ let portals = [portal1, portal2];
 
 let canInteractWithPortalGameObjects = [playerCube, companionCube];
 
-/**
- * @typedef {Object} ControllableObject
- * @property {string} name
- * @property {() => Vector3} getPos
- * @property {(pos: Vector3) => void} setPos
- * @property {(x: number, y: number, z: number) => void} rotate
- */
-
-/** @type {ControllableObject[]} */
-let controllableObjects = [
-    ...portals.map((portal) => ({
-        name: portal.name,
-        getPos: () => portal.pos,
-        setPos: (/** @type {Vector3} */ pos) => portal.setPos(pos),
-        rotate: (/** @type {number} */ x, /** @type {number} */ y, /** @type {number} */ z) => portal.rotate(x, y, z),
-    })),
-    {
-        name: companionCube.name,
-        getPos: () => companionCube.pos,
-        setPos: (/** @type {Vector3} */ pos) => (companionCube.pos = pos),
-        rotate: (/** @type {number} */ x, /** @type {number} */ y, /** @type {number} */ z) => companionCube.rotate(x, y, z),
-    },
-];
+/** @type {Transform[]} */
+let controllableObjects = [...portals.map((portal) => portal.transform), companionCube.transform];
 
 /** @type {GameObject | null} */
 let holdingObject = null;
@@ -366,7 +345,7 @@ function updateControllingObject() {
     }
     if (!posDelta.equal(Vector3.zero)) {
         posDelta = Vector3.mul(posDelta.normalize(), dt * controllingMoveSpeed);
-        controlling.setPos(Vector3.add(controlling.getPos(), posDelta));
+        controlling.translate(posDelta);
     }
 
     let rotateEuler = Vector3.zero.clone();
@@ -386,16 +365,16 @@ function updateControllingObject() {
 
 function updatePortalTeleports() {
     for (let portal of portals) {
-        portal.updatePortalCameraBaseOnPlayer(camera.pos, camera.rotation);
+        portal.updatePortalCameraBaseOnPlayer(camera.transform.position, camera.transform.rotation);
     }
 
     for (let portal of portals) {
-        let teleported = portal.getPlayerTeleportedTransformIfGoThroughPortal(camera.pos, camera.rotation, portalCrossMargin);
+        let teleported = portal.getPlayerTeleportedTransformIfGoThroughPortal(camera.transform.position, camera.transform.rotation, portalCrossMargin);
         if (teleported == null) continue;
 
         camera.updateTransformAndCorrectRoll(teleported[0], teleported[1]);
         for (let other of portals) {
-            other.refreshLastFramePlayerInFrontOfPortal(camera.pos, portalCrossMargin);
+            other.refreshLastFramePlayerInFrontOfPortal(camera.transform.position, portalCrossMargin);
         }
         break;
     }
@@ -405,10 +384,10 @@ function updatePortalTeleports() {
             let teleported = portal.getGameObjectTeleportedTransformIfGoThroughPortal(gameObject);
             if (teleported == null) continue;
 
-            gameObject.pos = teleported[0];
-            let oldLocalVelocity = gameObject.rotation.inverseRotateVector(gameObject.velocity);
+            gameObject.transform.position = teleported[0];
+            let oldLocalVelocity = gameObject.transform.inverseTransformDirection(gameObject.velocity);
             gameObject.velocity = teleported[1].rotateVector(oldLocalVelocity);
-            gameObject.rotation = teleported[1];
+            gameObject.transform.rotation = teleported[1];
             break;
         }
     }
@@ -424,12 +403,12 @@ function updateGameObjectTransforms() {
     camera.updateRollCorrection(dt);
 
     if (holdingObject != null) {
-        holdingObject.pos = Vector3.add(camera.pos, Vector3.mul(camera.getForward(), holdingDistance));
+        holdingObject.transform.position = Vector3.add(camera.transform.position, Vector3.mul(camera.transform.getForward(), holdingDistance));
     }
     companionCube.updatePhysics(dt);
 
-    playerCube.pos = camera.pos;
-    playerCube.rotation = camera.rotation;
+    playerCube.transform.position = camera.transform.position;
+    playerCube.transform.rotation = camera.transform.rotation;
 
     updatePortalTeleports();
 }
@@ -439,13 +418,13 @@ function gameObjectToWorldSpaceTriangles() {
     /** @type {Triangle[]} */
     let objectTris = [];
     for (let light of pointLights) {
-        objectTris.push(...light.getTransformedTriangles());
+        objectTris.push(...light.getTransformedTrianglesWithChildren());
     }
     for (let portal of portals) {
-        objectTris.push(...portal.getAllTransformedTriangles());
+        objectTris.push(...portal.getTransformedTrianglesWithChildren());
     }
     for (let gameObject of sceneObjects) {
-        objectTris.push(...gameObject.getTransformedTriangles());
+        objectTris.push(...gameObject.getTransformedTrianglesWithChildren());
     }
 
     let portal1Plane = portal1.getPlane();
@@ -454,11 +433,11 @@ function gameObjectToWorldSpaceTriangles() {
     for (let gameObject of canInteractWithPortalGameObjects) {
         let gameObjectTransformedTris = gameObject.getTransformedTriangles();
 
-        if (portal1.isPointDirectlyInFrontOrBackOfPortal(gameObject.pos) && portal1Plane.isIntersectingWithTris(gameObjectTransformedTris)) {
+        if (portal1.isPointDirectlyInFrontOrBackOfPortal(gameObject.transform.position) && portal1Plane.isIntersectingWithTris(gameObjectTransformedTris)) {
             let clonedGameObject = portal1.createCloneObjectOnOtherPortal(gameObject);
             objectTris.push(...portal1Plane.clipWithTris(gameObjectTransformedTris));
             objectTris.push(...portal2Plane.clipWithTris(clonedGameObject.getTransformedTriangles()));
-        } else if (portal2.isPointDirectlyInFrontOrBackOfPortal(gameObject.pos) && portal2Plane.isIntersectingWithTris(gameObjectTransformedTris)) {
+        } else if (portal2.isPointDirectlyInFrontOrBackOfPortal(gameObject.transform.position) && portal2Plane.isIntersectingWithTris(gameObjectTransformedTris)) {
             let clonedGameObject = portal2.createCloneObjectOnOtherPortal(gameObject);
             objectTris.push(...portal2Plane.clipWithTris(gameObjectTransformedTris));
             objectTris.push(...portal1Plane.clipWithTris(clonedGameObject.getTransformedTriangles()));
@@ -503,7 +482,7 @@ function worldSpaceToViewSpace(objectTris) {
     /** @type {Triangle[]} */
     let visibleTris = [];
     for (let tri of objectTris) {
-        if (Vector3.dot(tri.getNormal(), Vector3.sub(tri.getCenter(), camera.pos)) < 0) {
+        if (Vector3.dot(tri.getNormal(), Vector3.sub(tri.getCenter(), camera.transform.position)) < 0) {
             tri.mulMat4x4(viewMat);
             visibleTris.push(...tri.clipAgainstPlane(nearPlane));
         }
@@ -573,11 +552,11 @@ function shootPortal(index) {
 
     let normal = rasterizer.pointingPosNormal;
     let surfacePos = Vector3.add(rasterizer.pointingPos, Vector3.mul(normal, 0.1));
-    let upReference = Math.abs(Vector3.dot(normal, Vector3.up)) >= 0.9 ? camera.getForward() : Vector3.up;
+    let upReference = Math.abs(Vector3.dot(normal, Vector3.up)) >= 0.9 ? camera.transform.getForward() : Vector3.up;
 
     let portal = portals[index];
-    portal.setRotation(Quaternion.lookRotation(normal, upReference));
-    portal.setPos(surfacePos);
+    portal.transform.rotation = Quaternion.lookRotation(normal, upReference);
+    portal.transform.position = surfacePos;
 }
 
 /** @param {string} key */
@@ -595,11 +574,11 @@ function doKeyAction(key) {
         } else {
             companionCube.useGravity = false;
             companionCube.velocity = Vector3.zero.clone();
-            companionCube.pos = Vector3.add(camera.pos, Vector3.mul(camera.getForward(), holdingDistance));
+            companionCube.transform.position = Vector3.add(camera.transform.position, Vector3.mul(camera.transform.getForward(), holdingDistance));
         }
     } else if (key == "e") {
         if (holdingObject != null) {
-            holdingObject.velocity = Vector3.mul(camera.getForward(), throwSpeed);
+            holdingObject.velocity = Vector3.mul(camera.transform.getForward(), throwSpeed);
             holdingObject = null;
             return;
         }

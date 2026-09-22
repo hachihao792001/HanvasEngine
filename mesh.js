@@ -193,7 +193,7 @@ export class Triangle extends MathTriangle {
 
         let count = 0;
         for (let i = 0; i < pointLights.length; i++) {
-            const lightPos = pointLights[i].pos;
+            const lightPos = pointLights[i].transform.position;
 
             if (Vector3.dot(triWorldNormal, lightPos) <= triPlaneD) continue;
 
