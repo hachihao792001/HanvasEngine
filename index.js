@@ -1,7 +1,7 @@
 import { Vector3, Mat4x4, Quaternion, Plane } from "./math.js";
 import { Cube, ObjMesh } from "./mesh.js";
 import { Color, Texture } from "./graphics.js";
-import { Camera, GameObject, DirectionalLight, Rasterizer } from "./engine.js";
+import { Camera, Transform, GameObject, DirectionalLight, Rasterizer } from "./engine.js";
 
 /** @typedef {import("./mesh.js").Triangle} Triangle */
 
@@ -93,8 +93,8 @@ let pointLights = [
     new GameObject(new Vector3(0, 2, -5), Vector3.zero, new Vector3(0.1, 0.1, 0.1), new Color(255, 255, 255), cubeMesh, null, "Point light 2"),
 ];
 
-/** @type {GameObject[]} */
-let controllableObjects = [pointLights[0], pointLights[1]];
+/** @type {Transform[]} */
+let controllableObjects = [pointLights[0].transform, pointLights[1].transform];
 
 for (let light of pointLights) {
     light.isHoldable = true;
@@ -142,7 +142,7 @@ function updateControllingObject() {
     }
     if (!posDelta.equal(Vector3.zero)) {
         posDelta = Vector3.mul(posDelta.normalize(), dt * controllingMoveSpeed);
-        controlling.pos = Vector3.add(controlling.pos, posDelta);
+        controlling.translate(posDelta);
     }
 
     let rotateEuler = Vector3.zero.clone();
@@ -168,7 +168,7 @@ function updateGameObjectTransforms() {
     }
 
     if (holdingObject != null) {
-        holdingObject.pos = Vector3.add(camera.pos, Vector3.mul(camera.getForward(), holdingDistance));
+        holdingObject.transform.position = Vector3.add(camera.transform.position, Vector3.mul(camera.transform.getForward(), holdingDistance));
     }
 
     let q = Quaternion.buildQuaternionEuler(new Vector3(0, dt * dirLightRotateSpeed, 0));
@@ -199,7 +199,7 @@ function worldSpaceToViewSpace(objectTris) {
     /** @type {Triangle[]} */
     let visibleTris = [];
     for (let tri of objectTris) {
-        if (Vector3.dot(tri.getNormal(), Vector3.sub(tri.getCenter(), camera.pos)) < 0) {
+        if (Vector3.dot(tri.getNormal(), Vector3.sub(tri.getCenter(), camera.transform.position)) < 0) {
             tri.mulMat4x4(viewMat);
             visibleTris.push(...tri.clipAgainstPlane(nearPlane));
         }
