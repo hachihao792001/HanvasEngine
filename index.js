@@ -180,11 +180,11 @@ function updateGameObjectTransforms() {
 function gameObjectToWorldSpaceTriangles() {
     /** @type {Triangle[]} */
     let objectTris = [];
-    objectTris.push(...ground.getTransformedTriangles());
+    objectTris.push(...ground.getTransformedTrianglesWithChildren());
     for (let light of pointLights) {
-        objectTris.push(...light.getTransformedTriangles());
+        objectTris.push(...light.getTransformedTrianglesWithChildren());
     }
-    objectTris.push(...woodTower.getTransformedTriangles());
+    objectTris.push(...woodTower.getTransformedTrianglesWithChildren());
 
     return objectTris;
 }

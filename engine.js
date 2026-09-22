@@ -11,21 +11,149 @@ let shadowMapDistance = 20;
 
 export class Transform {
     /**
-     * @param {Vector3} [position]
-     * @param {Vector3} [eulerAngles]
-     * @param {Vector3} [scale]
+     * @param {Vector3} [localPosition]
+     * @param {Vector3} [localEulerAngles]
+     * @param {Vector3} [localScale]
      * @param {string} [name]
      */
-    constructor(position = Vector3.zero.clone(), eulerAngles = Vector3.zero.clone(), scale = Vector3.one.clone(), name = "Transform") {
-        this.position = position;
-        this.rotation = Quaternion.buildQuaternionEuler(eulerAngles);
-        this.scale = scale;
+    constructor(localPosition = Vector3.zero.clone(), localEulerAngles = Vector3.zero.clone(), localScale = Vector3.one.clone(), name = "Transform") {
+        this.localPosition = localPosition;
+        this.localRotation = Quaternion.buildQuaternionEuler(localEulerAngles);
+        this.localScale = localScale;
         this.name = name;
+
+        /** @type {Transform | null} */
+        this._parent = null;
+        /** @type {Transform[]} */
+        this._children = [];
+        /** @type {GameObject | null} */
+        this.gameObject = null;
     }
 
+    // ---------------------------------------------------------------- hierarchy
+
+    /** @returns {Transform | null} */
+    get parent() {
+        return this._parent;
+    }
+
+    /** @param {Transform | null} parent */
+    set parent(parent) {
+        this.setParent(parent);
+    }
+
+    get children() {
+        return this._children;
+    }
+
+    get childCount() {
+        return this._children.length;
+    }
+
+    get root() {
+        /** @type {Transform} */
+        let current = this;
+        while (current._parent != null) {
+            current = current._parent;
+        }
+        return current;
+    }
+
+    /**
+     * @param {Transform | null} parent
+     * @param {boolean} [worldPositionStays]
+     */
+    setParent(parent, worldPositionStays = true) {
+        if (parent === this._parent) return;
+        if (parent != null && parent.isChildOf(this)) {
+            console.warn("Cannot parent " + this.name + " to " + parent.name + ": that would make a cycle");
+            return;
+        }
+
+        let worldPosition = this.position;
+        let worldRotation = this.rotation;
+        let worldScale = this.lossyScale;
+
+        // detach old parent
+        if (this._parent != null) {
+            let index = this._parent._children.indexOf(this);
+            if (index >= 0) this._parent._children.splice(index, 1);
+        }
+
+        this._parent = parent;
+        if (parent != null) parent._children.push(this);
+
+        if (worldPositionStays) {
+            this.position = worldPosition;
+            this.rotation = worldRotation;
+            let parentScale = parent != null ? parent.lossyScale : Vector3.one;
+            this.localScale = new Vector3(worldScale.x / parentScale.x, worldScale.y / parentScale.y, worldScale.z / parentScale.z);
+        }
+    }
+
+    /**
+     * @param {Transform} parent
+     */
+    isChildOf(parent) {
+        /** @type {Transform | null} */
+        let current = this;
+        while (current != null) {
+            if (current === parent) return true;
+            current = current._parent;
+        }
+        return false;
+    }
+
+    /** @param {number} index */
+    getChild(index) {
+        return this._children[index];
+    }
+
+    /** re-parent every child to this transform's own parent */
+    detachChildren() {
+        for (let child of this._children.slice()) {
+            child.setParent(this._parent);
+        }
+    }
+
+    // ------------------------------------------------------------- world space
+
+    /** @returns {Vector3} */
+    get position() {
+        if (this._parent == null) return this.localPosition;
+        return this._parent.transformPoint(this.localPosition);
+    }
+
+    /** @param {Vector3} worldPosition */
+    set position(worldPosition) {
+        this.localPosition = this._parent == null ? worldPosition : this._parent.inverseTransformPoint(worldPosition);
+    }
+
+    /** @returns {Quaternion} */
+    get rotation() {
+        if (this._parent == null) return this.localRotation;
+        return Quaternion.multiply(this._parent.rotation, this.localRotation);
+    }
+
+    /** @param {Quaternion} worldRotation */
+    set rotation(worldRotation) {
+        this.localRotation = this._parent == null ? worldRotation : Quaternion.multiply(this._parent.rotation.conjugate(), worldRotation);
+    }
+
+    /**
+     * @returns {Vector3}
+     */
+    get lossyScale() {
+        if (this._parent == null) return this.localScale;
+        return Vector3.scale(this._parent.lossyScale, this.localScale);
+    }
+
+    // ------------------------------------------------------------------ basics
+
+    /** a copy of the local pose, without the parent or the children */
     clone() {
-        let t = new Transform(this.position.clone(), Vector3.zero, this.scale.clone(), this.name);
-        t.rotation = new Quaternion(this.rotation.a, this.rotation.b, this.rotation.c, this.rotation.d);
+        let t = new Transform(this.localPosition.clone(), Vector3.zero, this.localScale.clone(), this.name);
+        t.localRotation = new Quaternion(this.localRotation.a, this.localRotation.b, this.localRotation.c, this.localRotation.d);
         return t;
     }
 
@@ -78,6 +206,11 @@ export class Transform {
         this.rotation = Quaternion.buildQuaternionEuler(eulerAngles);
     }
 
+    /** @param {Vector3} eulerAngles */
+    setLocalEulerAngles(eulerAngles) {
+        this.localRotation = Quaternion.buildQuaternionEuler(eulerAngles);
+    }
+
     /**
      * @param {Vector3} forward
      * @param {Vector3} [up]
@@ -94,34 +227,40 @@ export class Transform {
         this.lookRotation(Vector3.sub(target, this.position).normalize(), up);
     }
 
+    // ---------------------------------------------------------------- matrices
+
     getScaleMatrix() {
-        return Mat4x4.Scale(this.scale.x, this.scale.y, this.scale.z);
+        let scale = this.lossyScale;
+        return Mat4x4.Scale(scale.x, scale.y, scale.z);
     }
 
     getTranslationMatrix() {
-        return Mat4x4.Translation(this.position.x, this.position.y, this.position.z);
+        let position = this.position;
+        return Mat4x4.Translation(position.x, position.y, position.z);
     }
 
     getViewMatrix() {
         return Mat4x4.ViewFromPosRot(this.position, this.rotation);
     }
 
+    // ------------------------------------------------------- space conversions
+
     /**
-     * world space point -> local space
+     * world space point -> this transform's local space
      * @param {Vector3} point
      */
     inverseTransformPoint(point) {
         let local = this.rotation.inverseRotateVector(Vector3.sub(point, this.position));
-        return new Vector3(local.x / this.scale.x, local.y / this.scale.y, local.z / this.scale.z);
+        let scale = this.lossyScale;
+        return new Vector3(local.x / scale.x, local.y / scale.y, local.z / scale.z);
     }
 
     /**
-     * local space point -> world space
+     * this transform's local space point -> world space
      * @param {Vector3} point
      */
     transformPoint(point) {
-        let scaled = Vector3.scale(point, this.scale);
-        return Vector3.add(this.position, this.rotation.rotateVector(scaled));
+        return Vector3.add(this.position, this.rotation.rotateVector(Vector3.scale(point, this.lossyScale)));
     }
 
     /**
@@ -235,6 +374,7 @@ export class GameObject {
         this.id = GameObject.incrementingID++;
         this.name = name || `GameObject ${this.id}`;
         this.transform = new Transform(pos, eulerAngles, scale, this.name);
+        this.transform.gameObject = this;
         this.color = color;
         this.mesh = mesh;
         this.texture = texture;
@@ -254,6 +394,19 @@ export class GameObject {
             transformedTri.texture = this.texture;
             transformedTri.gameObject = this;
             transformedTris.push(transformedTri);
+        }
+        return transformedTris;
+    }
+
+    /**
+     * @returns {Triangle[]}
+     */
+    getTransformedTrianglesWithChildren() {
+        let transformedTris = this.getTransformedTriangles();
+        for (let child of this.transform.children) {
+            if (child.gameObject != null) {
+                transformedTris.push(...child.gameObject.getTransformedTrianglesWithChildren());
+            }
         }
         return transformedTris;
     }
