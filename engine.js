@@ -1,5 +1,5 @@
 import { Color } from "./graphics.js";
-import { Quaternion, Vector3, Mat4x4, MathExtend } from "./math.js";
+import { Quaternion, Vector3, Mat4x4, MathExtend, MathTriangle } from "./math.js";
 import { Mesh, Triangle } from "./mesh.js";
 import { Texture } from "./graphics.js";
 
@@ -65,7 +65,7 @@ export class Transform {
      */
     setParent(parent, worldPositionStays = true) {
         if (parent === this._parent) return;
-        if (parent != null && parent.isChildOf(this)) {
+        if (parent != null && parent.isDescendantOf(this)) {
             console.warn("Cannot parent " + this.name + " to " + parent.name + ": that would make a cycle");
             return;
         }
@@ -94,7 +94,7 @@ export class Transform {
     /**
      * @param {Transform} parent
      */
-    isChildOf(parent) {
+    isDescendantOf(parent) {
         /** @type {Transform | null} */
         let current = this;
         while (current != null) {
@@ -313,16 +313,16 @@ export class Camera {
      * @param {number} mouseMovementY
      */
     updateRotation(mouseMovementX, mouseMovementY) {
-        let rotation = Quaternion.multiply(Quaternion.buildQuaternionAxisAngle(Vector3.up, -mouseMovementX * this.sensitivity), this.transform.rotation);
+		let afterYawRotation = Quaternion.multiply(Quaternion.buildQuaternionAxisAngle(Vector3.up, -mouseMovementX * this.sensitivity), this.transform.rotation);
 
-        let pitchAngle = -mouseMovementY * this.sensitivity;
-        let forwardY = rotation.rotateVector(Vector3.forward).y;
-        let currentPitch = Math.asin(Math.max(-1, Math.min(1, forwardY))) * (180 / Math.PI);
-        pitchAngle = Math.max(-Camera.maxPitch - currentPitch, Math.min(Camera.maxPitch - currentPitch, pitchAngle));
+		let additionalPitchAngle = -mouseMovementY * this.sensitivity;
+		let forwardY = Math.max(-1, Math.min(1, afterYawRotation.rotateVector(Vector3.forward).y));
+		let currentPitch = Math.asin(forwardY) * (180 / Math.PI);
+		additionalPitchAngle = Math.max(-Camera.maxPitch - currentPitch, Math.min(Camera.maxPitch - currentPitch, additionalPitchAngle));
 
-        let right = rotation.rotateVector(Vector3.right);
-        this.transform.rotation = Quaternion.multiply(Quaternion.buildQuaternionAxisAngle(right, pitchAngle), rotation);
-    }
+		let right = afterYawRotation.rotateVector(Vector3.right);
+		this.transform.rotation = Quaternion.multiply(Quaternion.buildQuaternionAxisAngle(right, additionalPitchAngle), afterYawRotation);
+	}
 
     /**
      * @param {number} dt
@@ -384,14 +384,17 @@ export class GameObject {
     getTransformedTriangles() {
         /** @type {Triangle[]} */
         let transformedTris = [];
+        let scaleMat = this.transform.getScaleMatrix();
+        let rotation = this.transform.rotation;
+        let translationMat = this.transform.getTranslationMatrix();
         for (let tri of this.mesh.tris) {
             let transformedTri = tri.clone();
-            transformedTri.mulMat4x4(this.transform.getScaleMatrix());
-            transformedTri.rotate(this.transform.rotation);
-            transformedTri.mulMat4x4(this.transform.getTranslationMatrix());
+            transformedTri.mulMat4x4(scaleMat);
+            transformedTri.rotate(rotation);
+            transformedTri.mulMat4x4(translationMat);
             transformedTri.updateWorldVertices();
+            transformedTri.color = this.color;
             transformedTri.texture = this.texture;
-            transformedTri.gameObject = this;
             transformedTris.push(transformedTri);
         }
         return transformedTris;
@@ -421,6 +424,7 @@ export class DirectionalLight {
         this.intensity = intensity;
         this.viewMatrix = new Mat4x4();
         this.projectionMatrix = new Mat4x4();
+        this.shadowTri = new MathTriangle();
         /** @type {number[][]} */
         this.shadowMap = [];
         for (let i = 0; i < shadowMapSize; i++) {
@@ -452,10 +456,19 @@ export class DirectionalLight {
             }
         }
 
-        for (let tri of tris) {
-            let shadowTri = tri.clone();
+        const shadowTri = this.shadowTri;
 
+        for (let tri of tris) {
             if (Vector3.dot(tri.getWorldNormal(), this.dir) >= 0) continue;
+
+            for (let i = 0; i < 3; i++) {
+                const sourceVertex = tri.vertices[i];
+                const shadowVertex = shadowTri.vertices[i];
+                shadowVertex.x = sourceVertex.x;
+                shadowVertex.y = sourceVertex.y;
+                shadowVertex.z = sourceVertex.z;
+                shadowVertex.w = sourceVertex.w;
+            }
 
             shadowTri.mulMat4x4(this.viewMatrix);
             shadowTri.mulMat4x4(this.projectionMatrix);
@@ -470,51 +483,90 @@ export class DirectionalLight {
 
             shadowTri.calculateSignedDoubleArea();
 
-            let edgeFunctionRow01 = MathExtend.edgeFunction(shadowTri.vertices[0], shadowTri.vertices[1], new Vector3(bbox.minX, bbox.minY, 0));
-            let edgeFunctionRow12 = MathExtend.edgeFunction(shadowTri.vertices[1], shadowTri.vertices[2], new Vector3(bbox.minX, bbox.minY, 0));
-            let edgeFunctionRow20 = MathExtend.edgeFunction(shadowTri.vertices[2], shadowTri.vertices[0], new Vector3(bbox.minX, bbox.minY, 0));
+            // everything the per pixel loop needs, read once instead of once per pixel
+            const vertex0 = shadowTri.vertices[0],
+                vertex1 = shadowTri.vertices[1],
+                vertex2 = shadowTri.vertices[2];
+            const vertex0X = vertex0.x,
+                vertex0Y = vertex0.y,
+                vertex0Z = vertex0.z;
+            const vertex1X = vertex1.x,
+                vertex1Y = vertex1.y,
+                vertex1Z = vertex1.z;
+            const vertex2X = vertex2.x,
+                vertex2Y = vertex2.y,
+                vertex2Z = vertex2.z;
 
-            for (let y = bbox.minY; y <= bbox.maxY; y++) {
+            const minX = bbox.minX,
+                maxX = bbox.maxX,
+                minY = bbox.minY,
+                maxY = bbox.maxY;
+
+            const signedDoubleArea = shadowTri.signedDoubleArea;
+
+            const edgeSlopeX01 = vertex0Y - vertex1Y;
+            const edgeSlopeX12 = vertex1Y - vertex2Y;
+            const edgeSlopeX20 = vertex2Y - vertex0Y;
+            const edgeSlopeY01 = vertex1X - vertex0X;
+            const edgeSlopeY12 = vertex2X - vertex1X;
+            const edgeSlopeY20 = vertex0X - vertex2X;
+
+            const shadowMap = this.shadowMap;
+
+            let edgeFunctionRow01 = edgeSlopeX01 * (minX - vertex0X) + edgeSlopeY01 * (minY - vertex0Y);
+            let edgeFunctionRow12 = edgeSlopeX12 * (minX - vertex1X) + edgeSlopeY12 * (minY - vertex1Y);
+            let edgeFunctionRow20 = edgeSlopeX20 * (minX - vertex2X) + edgeSlopeY20 * (minY - vertex2Y);
+
+            for (let y = minY; y <= maxY; y++) {
+                const shadowMapRow = shadowMap[y];
+
                 let edgeFunction01 = edgeFunctionRow01;
                 let edgeFunction12 = edgeFunctionRow12;
                 let edgeFunction20 = edgeFunctionRow20;
-                for (let x = bbox.minX; x <= bbox.maxX; x++) {
+                for (let x = minX; x <= maxX; x++) {
                     if (edgeFunction01 > 0 && edgeFunction12 > 0 && edgeFunction20 > 0) {
-                        const baryCoord0 = edgeFunction12 / shadowTri.signedDoubleArea;
-                        const baryCoord1 = edgeFunction20 / shadowTri.signedDoubleArea;
-                        const baryCoord2 = edgeFunction01 / shadowTri.signedDoubleArea;
-                        const z = shadowTri.vertices[0].z * baryCoord0 + shadowTri.vertices[1].z * baryCoord1 + shadowTri.vertices[2].z * baryCoord2;
-                        if (z < this.shadowMap[y][x]) {
-                            this.shadowMap[y][x] = z;
+                        const z = (edgeFunction12 * vertex0Z + edgeFunction20 * vertex1Z + edgeFunction01 * vertex2Z) / signedDoubleArea;
+                        if (z < shadowMapRow[x]) {
+                            shadowMapRow[x] = z;
                         }
                     }
-                    edgeFunction01 += shadowTri.vertices[0].y - shadowTri.vertices[1].y;
-                    edgeFunction12 += shadowTri.vertices[1].y - shadowTri.vertices[2].y;
-                    edgeFunction20 += shadowTri.vertices[2].y - shadowTri.vertices[0].y;
+                    edgeFunction01 += edgeSlopeX01;
+                    edgeFunction12 += edgeSlopeX12;
+                    edgeFunction20 += edgeSlopeX20;
                 }
-                edgeFunctionRow01 += shadowTri.vertices[1].x - shadowTri.vertices[0].x;
-                edgeFunctionRow12 += shadowTri.vertices[2].x - shadowTri.vertices[1].x;
-                edgeFunctionRow20 += shadowTri.vertices[0].x - shadowTri.vertices[2].x;
+                edgeFunctionRow01 += edgeSlopeY01;
+                edgeFunctionRow12 += edgeSlopeY12;
+                edgeFunctionRow20 += edgeSlopeY20;
             }
         }
     }
 
     /**
-     * @param {Vector3} pixelWorldPos
-     * @param {Vector3} triWorldNormal
+     * @param {number} pixelWorldPosX
+     * @param {number} pixelWorldPosY
+     * @param {number} pixelWorldPosZ
+     * @param {number} triWorldNormalX
+     * @param {number} triWorldNormalY
+     * @param {number} triWorldNormalZ
      */
-    isInShadow(pixelWorldPos, triWorldNormal) {
-        let dotProduct = Vector3.dot(triWorldNormal, this.dir);
+    isInShadow(pixelWorldPosX, pixelWorldPosY, pixelWorldPosZ, triWorldNormalX, triWorldNormalY, triWorldNormalZ) {
+        let dotProduct = triWorldNormalX * this.dir.x + triWorldNormalY * this.dir.y + triWorldNormalZ * this.dir.z;
         if (dotProduct >= 0) return false;
 
         let texelSize = shadowMapDistance / shadowMapSize;
         let normalOffset = texelSize * (1 - Math.abs(dotProduct));
 
-        let lightSpacePos = Vector3.add(pixelWorldPos, Vector3.mul(triWorldNormal, normalOffset));
+        let lightSpacePos = new Vector3(
+            pixelWorldPosX + triWorldNormalX * normalOffset,
+            pixelWorldPosY + triWorldNormalY * normalOffset,
+            pixelWorldPosZ + triWorldNormalZ * normalOffset,
+        );
         lightSpacePos.mulMat4x4(this.viewMatrix);
         lightSpacePos.mulMat4x4(this.projectionMatrix);
 
-        lightSpacePos = Vector3.div(lightSpacePos, lightSpacePos.w);
+        lightSpacePos.x /= lightSpacePos.w;
+        lightSpacePos.y /= lightSpacePos.w;
+        lightSpacePos.z /= lightSpacePos.w;
 
         const x = Math.floor(((lightSpacePos.x + 1) * shadowMapSize) / 2);
         const y = Math.floor(((-lightSpacePos.y + 1) * shadowMapSize) / 2);
@@ -540,6 +592,7 @@ export class Rasterizer {
 
         this.imageData = this.ctx.createImageData(this.canvasWidth, this.canvasHeight);
         this.screenBuffer = this.imageData.data;
+        this.screenBuffer32 = new Uint32Array(this.imageData.data.buffer);
         this.depthBuffer = new Float64Array(this.canvasWidth * this.canvasHeight);
 
         this.screenBuffer.fill(255);
@@ -547,9 +600,6 @@ export class Rasterizer {
 
         this.screenCenterX = Math.floor(this.canvasWidth / 2);
         this.screenCenterY = Math.floor(this.canvasHeight / 2);
-
-        /** @type {Vector3[]} */
-        this.activeLights = new Array(maxActiveLights);
     }
 
     /**
@@ -563,6 +613,7 @@ export class Rasterizer {
 
         this.imageData = this.ctx.createImageData(this.canvasWidth, this.canvasHeight);
         this.screenBuffer = this.imageData.data;
+        this.screenBuffer32 = new Uint32Array(this.imageData.data.buffer);
         this.depthBuffer = new Float64Array(this.canvasWidth * this.canvasHeight);
 
         this.screenBuffer.fill(255);
@@ -573,7 +624,7 @@ export class Rasterizer {
     }
 
     clearScreen() {
-        this.screenBuffer.fill(244);
+        this.screenBuffer32.fill(0xfff4f4f4);
         this.depthBuffer.fill(Infinity);
     }
 
@@ -590,9 +641,9 @@ export class Rasterizer {
         const depthBuffer = this.depthBuffer;
         const canvasWidth = this.canvasWidth;
         const canvasHeight = this.canvasHeight;
-        const activeLights = this.activeLights;
+        /** @type {Vector3[]} */
+        const activeLights = new Array(maxActiveLights);
         const pointLightRange2 = pointLightRange * pointLightRange;
-
         for (let tri of tris) {
             let vertices = tri.vertices;
             for (let i = 0; i < vertices.length; i++) {
@@ -692,7 +743,7 @@ export class Rasterizer {
                                 (perspectiveWorld0Z * baryCoord0 + perspectiveWorld1Z * baryCoord1 + perspectiveWorld2Z * baryCoord2) / pixelInvZ;
 
                             let shadowFactor = 1.0;
-                            if (useShadow && dirLight.isInShadow(new Vector3(pixelWorldX, pixelWorldY, pixelWorldZ), triWorldNormal)) {
+                            if (useShadow && dirLight.isInShadow(pixelWorldX, pixelWorldY, pixelWorldZ, worldNormalX, worldNormalY, worldNormalZ)) {
                                 shadowFactor = 0.5;
                             }
 

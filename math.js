@@ -444,10 +444,10 @@ export class Quaternion {
         const sinC = Math.sin(c);
 
         return new Quaternion(
-            cosC * cosB * cosA + sinC * sinB * sinA,
-            -cosC * cosB * sinA + sinC * sinB * cosA,
-            -cosC * sinB * cosA - sinC * cosB * sinA,
-            -sinC * cosB * cosA + cosC * sinB * sinA,
+            cosC * cosB * cosA - sinC * sinB * sinA,
+            -cosC * cosB * sinA - sinC * sinB * cosA,
+            -cosC * sinB * cosA + sinC * cosB * sinA,
+            -sinC * cosB * cosA - cosC * sinB * sinA,
         );
     }
 

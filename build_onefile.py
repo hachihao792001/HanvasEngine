@@ -3,6 +3,8 @@
 Bundle index.html and everything it depends on into a single self-contained OneFile.html
 (same shape as htmlPreview35.html: one flat <script> block, no modules, no extra files).
 
+The output is indented with tabs (4 source spaces = 1 tab) and uses LF line endings.
+
 What gets inlined:
   * <script src="..."> - the whole ES module graph, flattened in dependency order,
     with `import`/`export` statements stripped so it runs as a classic script, and the
@@ -15,6 +17,7 @@ Usage:
     py build_onefile.py                      # index.html -> OneFile.html
     py build_onefile.py --embed-remote       # also bake in textures/models
     py build_onefile.py --keep-jsdoc         # leave the JSDoc comments in
+    py build_onefile.py --indent 4           # indent with 4 spaces instead of tabs
     py build_onefile.py page.html out.html
 """
 
@@ -254,6 +257,16 @@ def detect_indent_unit(html):
     return "\t" if tabs >= spaces else "    "
 
 
+def retab(line, unit, width=4):
+    """Re-express a line's leading indent in `unit`, reading tabs and every `width` spaces as one level."""
+    stripped = line.lstrip(" \t")
+    indent = line[: len(line) - len(stripped)]
+    level = indent.count("\t")
+    spaces = indent.count(" ")
+    level += spaces // width
+    return unit * level + " " * (spaces % width) + stripped
+
+
 def normalize_indent(indent, unit):
     """Re-express a captured indent string in terms of `unit` (the document keeps one style)."""
     if "\t" in indent:
@@ -319,8 +332,8 @@ def advance_js_state(line, state):
         i += 1
 
 
-def indent_code(code, prefix):
-    """Prefix every line with `prefix`, leaving blank lines and template-literal text alone."""
+def indent_code(code, prefix, unit):
+    """Re-indent every line in `unit` and prefix it, leaving blank lines and template-literal text alone."""
     state = {"stack": [], "block_comment": False}
     out = []
     for line in code.split("\n"):
@@ -328,7 +341,7 @@ def indent_code(code, prefix):
         if inside_template:
             out.append(line)  # raw string content - indenting it would change the value
         elif line.strip():
-            out.append(prefix + line)
+            out.append(prefix + retab(line, unit))
         else:
             out.append("")
         advance_js_state(line, state)
@@ -370,6 +383,7 @@ def bundle(entry_html, output, embed_remote, indent_unit=None, keep_jsdoc=False)
     base = entry_html.parent
     html = read_text(entry_html)
     unit = indent_unit or detect_indent_unit(html)
+    html = "\n".join(retab(line, unit) for line in html.split("\n"))
 
     def inline_script(match):
         src = match.group("src")
@@ -394,7 +408,7 @@ def bundle(entry_html, output, embed_remote, indent_unit=None, keep_jsdoc=False)
         code = code.replace("</script>", "<\\/script>")
 
         tag_indent = normalize_indent(match.group("indent"), unit)
-        code = indent_code(code, tag_indent + unit)
+        code = indent_code(code, tag_indent + unit, unit)
         return "%s<script>\n%s\n%s</script>" % (tag_indent, code, tag_indent)
 
     def inline_link(match):
@@ -412,13 +426,14 @@ def bundle(entry_html, output, embed_remote, indent_unit=None, keep_jsdoc=False)
 
         print("  inlining %s" % href_match.group(1))
         tag_indent = normalize_indent(match.group("indent"), unit)
-        css = indent_code(read_text(css_path).strip(), tag_indent + unit)
+        css = indent_code(read_text(css_path).strip(), tag_indent + unit, unit)
         return "%s<style>\n%s\n%s</style>" % (tag_indent, css, tag_indent)
 
     html = LINK_TAG_RE.sub(inline_link, html)
     html = SCRIPT_TAG_RE.sub(inline_script, html)
 
-    output.write_text(html, encoding="utf-8")
+    with open(output, "w", encoding="utf-8", newline="\n") as out:
+        out.write(html)
     print("\nWrote %s (%.0f KB)" % (output, output.stat().st_size / 1024))
 
 
@@ -440,9 +455,9 @@ def main():
     )
     parser.add_argument(
         "--indent",
-        default="auto",
+        default="tab",
         metavar="auto|tab|N",
-        help="indent unit for the inlined code: auto (match the HTML), tab, or N spaces",
+        help="indent unit for the whole output: tab (default), auto (match the HTML), or N spaces",
     )
     args = parser.parse_args()
 

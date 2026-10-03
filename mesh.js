@@ -12,12 +12,11 @@ export class Triangle extends MathTriangle {
         super(vertices);
 
         this.uv = uv;
+        this.viewDistanceSquared = 0;
         this.worldVertices = [this.vertices[0].clone(), this.vertices[1].clone(), this.vertices[2].clone()];
         this.color = color;
         /** @type {Texture | null} */
         this.texture = null;
-        /** @type {GameObject | null} */
-        this.gameObject = null;
     }
 
     clone() {
@@ -29,7 +28,6 @@ export class Triangle extends MathTriangle {
         }
         tri.color = this.color;
         tri.texture = this.texture;
-        tri.gameObject = this.gameObject;
         return tri;
     }
 
@@ -81,7 +79,6 @@ export class Triangle extends MathTriangle {
             outTri.uv[2] = Vector2.lerp(this.uv[frontPoints[0]], this.uv[behindPoints[1]], t2);
             outTri.color = this.color;
             outTri.texture = this.texture;
-            outTri.gameObject = this.gameObject;
             outTris.push(outTri);
         } else if (frontPoints.length == 2 && behindPoints.length == 1) {
             if (frontPoints[0] == 0 && frontPoints[1] == 2) {
@@ -108,7 +105,6 @@ export class Triangle extends MathTriangle {
             outTri1.uv[2] = Vector2.lerp(this.uv[frontPoints[0]], this.uv[behindPoints[0]], t1);
             outTri1.color = this.color;
             outTri1.texture = this.texture;
-            outTri1.gameObject = this.gameObject;
             outTris.push(outTri1);
 
             let outTri2 = new Triangle();
@@ -123,7 +119,6 @@ export class Triangle extends MathTriangle {
             outTri2.uv[2] = Vector2.lerp(this.uv[frontPoints[0]], this.uv[behindPoints[0]], t1);
             outTri2.color = this.color;
             outTri2.texture = this.texture;
-            outTri2.gameObject = this.gameObject;
             outTris.push(outTri2);
         }
 
@@ -178,18 +173,19 @@ export class Triangle extends MathTriangle {
             );
             if (currentRadius2 > triBoundingCircleRadius2) triBoundingCircleRadius2 = currentRadius2;
         }
-        const reach = pointLightRange + Math.sqrt(triBoundingCircleRadius2);
-
-        const triPlaneD = Vector3.dot(triWorldNormal, this.worldVertices[0]);
+        const totalRange = pointLightRange + Math.sqrt(triBoundingCircleRadius2);
 
         let count = 0;
         for (let i = 0; i < pointLights.length; i++) {
             const lightPos = pointLights[i].transform.position;
 
-            if (Vector3.dot(triWorldNormal, lightPos) <= triPlaneD) continue;
+            const toLightX = lightPos.x - triWorldCenterX;
+            const toLightY = lightPos.y - triWorldCenterY;
+            const toLightZ = lightPos.z - triWorldCenterZ;
+            if (triWorldNormal.x * toLightX + triWorldNormal.y * toLightY + triWorldNormal.z * toLightZ <= 0) continue;
 
             const lightDistance2 = MathExtend.hypotSquare(lightPos.x, lightPos.y, lightPos.z, triWorldCenterX, triWorldCenterY, triWorldCenterZ);
-            if (lightDistance2 > reach * reach) continue;
+            if (lightDistance2 > totalRange * totalRange) continue;
 
             outLights[count] = lightPos;
             count++;

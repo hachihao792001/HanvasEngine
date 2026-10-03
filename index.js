@@ -143,7 +143,14 @@ function worldSpaceToViewSpace(objectTris) {
  * @param {Triangle[]} visibleTris
  */
 function sortNearestFirst(visibleTris) {
-    visibleTris.sort((a, b) => (a.vertices[0].z + a.vertices[1].z + a.vertices[2].z) / 3 - (b.vertices[0].z + b.vertices[1].z + b.vertices[2].z) / 3);
+    for (let tri of visibleTris) {
+        const vertices = tri.vertices;
+        const centerX = (vertices[0].x + vertices[1].x + vertices[2].x) / 3;
+        const centerY = (vertices[0].y + vertices[1].y + vertices[2].y) / 3;
+        const centerZ = (vertices[0].z + vertices[1].z + vertices[2].z) / 3;
+        tri.viewDistanceSquared = centerX * centerX + centerY * centerY + centerZ * centerZ;
+    }
+    visibleTris.sort((a, b) => a.viewDistanceSquared - b.viewDistanceSquared);
 }
 
 /** @param {Triangle[]} visibleTris */
