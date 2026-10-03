@@ -1,7 +1,7 @@
 import { Vector3, Mat4x4, Quaternion, Plane } from "./math.js";
 import { Cube, ObjMesh } from "./mesh.js";
 import { Color, Texture } from "./graphics.js";
-import { Camera, Transform, GameObject, DirectionalLight, Rasterizer } from "./engine.js";
+import { Camera, GameObject, DirectionalLight, Rasterizer } from "./engine.js";
 
 /** @typedef {import("./mesh.js").Triangle} Triangle */
 
@@ -93,82 +93,13 @@ let pointLights = [
     new GameObject(new Vector3(0, 2, -5), Vector3.zero, new Vector3(0.1, 0.1, 0.1), new Color(255, 255, 255), cubeMesh, null, "Point light 2"),
 ];
 
-/** @type {Transform[]} */
-let controllableObjects = [pointLights[0].transform, pointLights[1].transform];
-
-for (let light of pointLights) {
-    light.isHoldable = true;
-}
-/** @type {GameObject | null} */
-let holdingObject = null;
-let holdingDistance = 5;
-
-const controllingObjectText = /** @type {HTMLElement} */ (document.getElementById("controllingObject"));
-let controllingObject = 0;
-let controllingMoveSpeed = 6;
-let controllingRotateSpeed = 60;
-setControllingObject(0);
-
-/** @param {number} index */
-function setControllingObject(index) {
-    controllingObject = index % controllableObjects.length;
-    controllingObjectText.innerText = controllableObjects[controllingObject].name;
-}
-
 let lastTime = performance.now();
 let dt = 0;
 
-function updateControllingObject() {
-    let controlling = controllableObjects[controllingObject];
-
-    let posDelta = Vector3.zero;
-    if (keyStates["i"]) {
-        posDelta = Vector3.add(posDelta, Vector3.forward);
-    }
-    if (keyStates["k"]) {
-        posDelta = Vector3.add(posDelta, Vector3.back);
-    }
-    if (keyStates["j"]) {
-        posDelta = Vector3.add(posDelta, Vector3.left);
-    }
-    if (keyStates["l"]) {
-        posDelta = Vector3.add(posDelta, Vector3.right);
-    }
-    if (keyStates["u"]) {
-        posDelta = Vector3.add(posDelta, Vector3.up);
-    }
-    if (keyStates["o"]) {
-        posDelta = Vector3.add(posDelta, Vector3.down);
-    }
-    if (!posDelta.equal(Vector3.zero)) {
-        posDelta = Vector3.mul(posDelta.normalize(), dt * controllingMoveSpeed);
-        controlling.translate(posDelta);
-    }
-
-    let rotateEuler = Vector3.zero.clone();
-    if (keyStates["b"]) {
-        rotateEuler.x = dt * controllingRotateSpeed;
-    }
-    if (keyStates["n"]) {
-        rotateEuler.y = dt * controllingRotateSpeed;
-    }
-    if (keyStates["m"]) {
-        rotateEuler.z = dt * controllingRotateSpeed;
-    }
-    if (!rotateEuler.equal(Vector3.zero)) {
-        controlling.rotate(rotateEuler.x, rotateEuler.y, rotateEuler.z);
-    }
-}
-
 function updateGameObjectTransforms() {
-    updateControllingObject();
     camera.updateMovement(dt, keyStates);
     if (lookInput.x != 0 || lookInput.y != 0) {
         camera.updateRotation(lookInput.x * dt * lookSpeed, lookInput.y * dt * lookSpeed);
-    }
-
-    if (holdingObject != null) {
-        holdingObject.transform.position = Vector3.add(camera.transform.position, Vector3.mul(camera.transform.getForward(), holdingDistance));
     }
 
     let q = Quaternion.buildQuaternionEuler(new Vector3(0, dt * dirLightRotateSpeed, 0));
@@ -385,23 +316,6 @@ window.addEventListener("keydown", (e) => {
 window.addEventListener("keyup", (e) => {
     keyStates[e.key] = false;
 });
-window.addEventListener("keypress", (e) => {
-    if (e.key == "p") {
-        setControllingObject(controllingObject + 1);
-    } else if (e.key == "e") {
-        if (holdingObject != null) {
-            holdingObject = null;
-            return;
-        }
-
-        let pointingTri = rasterizer.pointingTri;
-        if (pointingTri == null || pointingTri.gameObject == null) return;
-        if (!pointingTri.gameObject.isHoldable) return;
-
-        holdingObject = pointingTri.gameObject;
-    }
-});
-
 mobileControlsButton.addEventListener("click", () => {
     mobileControls.style.display = mobileControls.style.display == "none" ? "" : "none";
     mobileControlsButton.blur();
