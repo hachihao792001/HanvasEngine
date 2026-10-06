@@ -233,6 +233,7 @@ export class Vector3 {
         return Vector3.dot(cross, axis) > 0 ? -angle : angle;
     }
 }
+
 Vector3.zero = new Vector3(0, 0, 0);
 Vector3.one = new Vector3(1, 1, 1);
 Vector3.left = new Vector3(-1, 0, 0);
@@ -309,7 +310,6 @@ export class Mat4x4 {
         matrix.m[3][3] = 1;
         return matrix;
     }
-
     /**
      *
      * @param {Vector3} pos

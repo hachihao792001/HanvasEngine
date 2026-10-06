@@ -5,9 +5,9 @@ import { Texture } from "./graphics.js";
 
 let maxActiveLights = 16;
 let ambientLight = 0.2;
-let shadowMapSize = 512;
-let shadowBias = 0.01;
-let shadowMapDistance = 20;
+let shadowMapSize = 768;
+let shadowBias = 0.0015;
+let shadowMapDistance = 16;
 
 export class Transform {
     /**
@@ -483,7 +483,6 @@ export class DirectionalLight {
 
             shadowTri.calculateSignedDoubleArea();
 
-            // everything the per pixel loop needs, read once instead of once per pixel
             const vertex0 = shadowTri.vertices[0],
                 vertex1 = shadowTri.vertices[1],
                 vertex2 = shadowTri.vertices[2];
@@ -561,6 +560,7 @@ export class DirectionalLight {
             pixelWorldPosY + triWorldNormalY * normalOffset,
             pixelWorldPosZ + triWorldNormalZ * normalOffset,
         );
+
         lightSpacePos.mulMat4x4(this.viewMatrix);
         lightSpacePos.mulMat4x4(this.projectionMatrix);
 
@@ -585,21 +585,10 @@ export class Rasterizer {
      * @param {HTMLParagraphElement} asciiParagraph
      */
     constructor(canvasWidth, canvasHeight, ctx, asciiParagraph) {
-        this.canvasWidth = canvasWidth;
-        this.canvasHeight = canvasHeight;
         this.ctx = ctx;
         this.asciiParagraph = asciiParagraph;
 
-        this.imageData = this.ctx.createImageData(this.canvasWidth, this.canvasHeight);
-        this.screenBuffer = this.imageData.data;
-        this.screenBuffer32 = new Uint32Array(this.imageData.data.buffer);
-        this.depthBuffer = new Float64Array(this.canvasWidth * this.canvasHeight);
-
-        this.screenBuffer.fill(255);
-        this.depthBuffer.fill(Infinity);
-
-        this.screenCenterX = Math.floor(this.canvasWidth / 2);
-        this.screenCenterY = Math.floor(this.canvasHeight / 2);
+        this.updateResolution(canvasWidth, canvasHeight);
     }
 
     /**
@@ -607,7 +596,7 @@ export class Rasterizer {
      * @param {Number} canvasWidth
      * @param {Number} canvasHeight
      */
-    resize(canvasWidth, canvasHeight) {
+    updateResolution(canvasWidth, canvasHeight) {
         this.canvasWidth = canvasWidth;
         this.canvasHeight = canvasHeight;
 
@@ -616,15 +605,14 @@ export class Rasterizer {
         this.screenBuffer32 = new Uint32Array(this.imageData.data.buffer);
         this.depthBuffer = new Float64Array(this.canvasWidth * this.canvasHeight);
 
-        this.screenBuffer.fill(255);
-        this.depthBuffer.fill(Infinity);
+        this.clearScreen();
 
         this.screenCenterX = Math.floor(this.canvasWidth / 2);
         this.screenCenterY = Math.floor(this.canvasHeight / 2);
     }
 
     clearScreen() {
-        this.screenBuffer32.fill(0xfff4f4f4);
+        this.screenBuffer32.fill(0xfff0f0f0);
         this.depthBuffer.fill(Infinity);
     }
 
@@ -643,7 +631,7 @@ export class Rasterizer {
         const canvasHeight = this.canvasHeight;
         /** @type {Vector3[]} */
         const activeLights = new Array(maxActiveLights);
-        const pointLightRange2 = pointLightRange * pointLightRange;
+
         for (let tri of tris) {
             let vertices = tri.vertices;
             for (let i = 0; i < vertices.length; i++) {
@@ -663,7 +651,6 @@ export class Rasterizer {
                 worldNormalZ = triWorldNormal.z;
 
             const dirLightDiffuse = (1 - (Vector3.dot(triWorldNormal, dirLight.dir) + 1) / 2) * dirLight.intensity;
-            const activeLightCount = pointLightIntensity > 0 ? tri.getPointLightsThatCanAffectTri(pointLightRange, pointLights, activeLights) : 0;
 
             const bbox = tri.boundingBox(canvasWidth, canvasHeight);
 
@@ -671,7 +658,6 @@ export class Rasterizer {
             let edgeFunctionRow12 = MathExtend.edgeFunction(tri.vertices[1], tri.vertices[2], new Vector3(bbox.minX, bbox.minY, 0));
             let edgeFunctionRow20 = MathExtend.edgeFunction(tri.vertices[2], tri.vertices[0], new Vector3(bbox.minX, bbox.minY, 0));
 
-            // everything the per pixel loop needs, read once instead of once per pixel
             const vertex0 = tri.vertices[0],
                 vertex1 = tri.vertices[1],
                 vertex2 = tri.vertices[2];
@@ -712,6 +698,9 @@ export class Rasterizer {
                 perspectiveWorld2Y = world2.y * uv2W,
                 perspectiveWorld2Z = world2.z * uv2W;
 
+            const pointLightRangeSquare = pointLightRange * pointLightRange;
+            const activeLightCount = pointLightIntensity > 0 ? tri.getPointLightsThatCanAffectTri(pointLightRange, pointLights, activeLights) : 0;
+
             const triColor = tri.color;
             const texture = tri.texture;
             const texturePixels = texture ? texture.pixels : null;
@@ -748,26 +737,24 @@ export class Rasterizer {
                             }
 
                             let totalPointLightDiffuse = 0;
-                            if (pointLightIntensity > 0) {
-                                for (let i = 0; i < activeLightCount; i++) {
-                                    const lightPos = activeLights[i];
-                                    const pointLightVecX = lightPos.x - pixelWorldX;
-                                    const pointLightVecY = lightPos.y - pixelWorldY;
-                                    const pointLightVecZ = lightPos.z - pixelWorldZ;
-                                    const distanceFromPixelToPointLight2 =
-                                        pointLightVecX * pointLightVecX + pointLightVecY * pointLightVecY + pointLightVecZ * pointLightVecZ;
-                                    if (distanceFromPixelToPointLight2 >= pointLightRange2) continue;
+                            for (let i = 0; i < activeLightCount; i++) {
+                                const lightPos = activeLights[i];
+                                const pointLightVecX = lightPos.x - pixelWorldX;
+                                const pointLightVecY = lightPos.y - pixelWorldY;
+                                const pointLightVecZ = lightPos.z - pixelWorldZ;
+                                const distanceFromPixelToPointLight2 =
+                                    pointLightVecX * pointLightVecX + pointLightVecY * pointLightVecY + pointLightVecZ * pointLightVecZ;
+                                if (distanceFromPixelToPointLight2 >= pointLightRangeSquare) continue;
 
-                                    const distance = Math.sqrt(distanceFromPixelToPointLight2);
-                                    const dot = (worldNormalX * pointLightVecX + worldNormalY * pointLightVecY + worldNormalZ * pointLightVecZ) / distance;
-                                    const currentPointLightDiffuse = (1 + dot) / 2;
-                                    const pointLightDistanceRatio = distanceFromPixelToPointLight2 / pointLightRange2;
-                                    const inverseSquareDistance = 1 / (1 + 0.02 * distanceFromPixelToPointLight2);
-                                    const attenuation = (1 - pointLightDistanceRatio) * inverseSquareDistance;
-                                    totalPointLightDiffuse += currentPointLightDiffuse * attenuation;
-                                }
-                                totalPointLightDiffuse *= pointLightIntensity;
+                                const distance = Math.sqrt(distanceFromPixelToPointLight2);
+                                const dot = (worldNormalX * pointLightVecX + worldNormalY * pointLightVecY + worldNormalZ * pointLightVecZ) / distance;
+                                const currentPointLightDiffuse = (1 + dot) / 2;
+                                const pointLightDistanceRatio = distanceFromPixelToPointLight2 / pointLightRangeSquare;
+                                const inverseSquareDistance = 1 / (1 + 0.02 * distanceFromPixelToPointLight2);
+                                const attenuation = (1 - pointLightDistanceRatio) * inverseSquareDistance;
+                                totalPointLightDiffuse += currentPointLightDiffuse * attenuation;
                             }
+                            totalPointLightDiffuse *= pointLightIntensity;
 
                             const lightIntensity = Math.max(ambientLight, (dirLightDiffuse + totalPointLightDiffuse) * shadowFactor);
 
@@ -820,7 +807,8 @@ export class Rasterizer {
                 renderString += "\n";
             }
 
-            if (this.asciiParagraph != null && this.asciiParagraph.innerText != renderString) this.asciiParagraph.innerText = renderString;
+            if (this.asciiParagraph != null && this.asciiParagraph.innerText != renderString)
+                this.asciiParagraph.innerText = renderString;
         }
     }
 }

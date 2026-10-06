@@ -80,7 +80,7 @@ let woodTexture = new Texture(
 
 let cubeMesh = new Cube();
 let woodTower = new GameObject(
-    new Vector3(0, 0, 0),
+    new Vector3(0, -0.17, 0),
     Vector3.zero,
     new Vector3(1, 1, 1),
     new Color(255, 255, 255),
@@ -118,6 +118,14 @@ function gameObjectToWorldSpaceTriangles() {
     objectTris.push(...woodTower.getTransformedTrianglesWithChildren());
 
     return objectTris;
+}
+
+/** @param {Triangle[]} objectTris */
+function buildShadowMap(objectTris) {
+    if (useShadow) {
+        dirLight.buildViewAndProjectionMatrix();
+        dirLight.buildShadowMap(objectTris);
+    }
 }
 
 /**
@@ -190,12 +198,7 @@ function update(time = performance.now()) {
 
     updateGameObjectTransforms();
     let objectTris = gameObjectToWorldSpaceTriangles();
-
-    if (useShadow) {
-        dirLight.buildViewAndProjectionMatrix();
-        dirLight.buildShadowMap(objectTris);
-    }
-
+    buildShadowMap(objectTris);
     let visibleTris = worldSpaceToViewSpace(objectTris);
     sortNearestFirst(visibleTris);
     viewSpaceToClipSpace(visibleTris);
@@ -244,33 +247,33 @@ function readResolution(input, min, max, current) {
     return Math.max(min, Math.min(max, value));
 }
 
-function applyRenderResolution() {
+function updateRenderResolution() {
     gameCanvas.width = useASCII ? asciiWidth : canvasRenderWidth;
     gameCanvas.height = useASCII ? asciiHeight : canvasRenderHeight;
 
     projectionMatrix = Mat4x4.Projection(fov, gameCanvas.height, gameCanvas.width, znear, zfar);
-    rasterizer.resize(gameCanvas.width, gameCanvas.height);
+    rasterizer.updateResolution(gameCanvas.width, gameCanvas.height);
 }
 
-function applyCanvasResolution() {
+function readAndApplyResolutionInput() {
     canvasRenderWidth = readResolution(canvasResWidthInput, 16, 1920, canvasRenderWidth);
     canvasRenderHeight = readResolution(canvasResHeightInput, 16, 1440, canvasRenderHeight);
     canvasResWidthInput.value = canvasRenderWidth.toString();
     canvasResHeightInput.value = canvasRenderHeight.toString();
-    if (!useASCII) applyRenderResolution();
+    if (!useASCII) updateRenderResolution();
 }
-canvasResWidthInput.addEventListener("change", applyCanvasResolution);
-canvasResHeightInput.addEventListener("change", applyCanvasResolution);
+canvasResWidthInput.addEventListener("change", readAndApplyResolutionInput);
+canvasResHeightInput.addEventListener("change", readAndApplyResolutionInput);
 
-function applyAsciiResolution() {
+function readAndApplyASCIIResolutionInput() {
     asciiWidth = readResolution(asciiResWidthInput, 8, 500, asciiWidth);
     asciiHeight = readResolution(asciiResHeightInput, 8, 400, asciiHeight);
     asciiResWidthInput.value = asciiWidth.toString();
     asciiResHeightInput.value = asciiHeight.toString();
-    if (useASCII) applyRenderResolution();
+    if (useASCII) updateRenderResolution();
 }
-asciiResWidthInput.addEventListener("change", applyAsciiResolution);
-asciiResHeightInput.addEventListener("change", applyAsciiResolution);
+asciiResWidthInput.addEventListener("change", readAndApplyASCIIResolutionInput);
+asciiResHeightInput.addEventListener("change", readAndApplyASCIIResolutionInput);
 
 async function requestMouseLook() {
     try {
@@ -292,10 +295,6 @@ gameCanvas.addEventListener("mousedown", () => {
     if (document.pointerLockElement !== renderDiv) requestMouseLook();
 });
 
-document.addEventListener("contextmenu", (e) => {
-    if (document.pointerLockElement === renderDiv) e.preventDefault();
-});
-
 document.addEventListener("mousemove", (e) => {
     if (document.pointerLockElement === renderDiv) {
         camera.updateRotation(e.movementX, e.movementY);
@@ -308,7 +307,7 @@ document.addEventListener("pointerlockchange", () => {
 
 asciiCheckBox.addEventListener("change", () => {
     useASCII = asciiCheckBox.checked;
-    applyRenderResolution();
+    updateRenderResolution();
     asciiParagraph.style.display = useASCII ? "" : "none";
     gameCanvas.style.display = useASCII ? "none" : "";
     mouseLookButton.style.display = useASCII ? "" : "none";

@@ -3,7 +3,7 @@
 Bundle index.html and everything it depends on into a single self-contained OneFile.html
 (same shape as htmlPreview35.html: one flat <script> block, no modules, no extra files).
 
-The output is indented with tabs (4 source spaces = 1 tab) and uses LF line endings.
+The output is indented with tabs (4 source spaces = 1 tab) and uses CRLF line endings (--eol lf for LF).
 
 What gets inlined:
   * <script src="..."> - the whole ES module graph, flattened in dependency order,
@@ -379,7 +379,7 @@ def embed_remote_assets(code):
     return REMOTE_ASSET_RE.sub(replace, code)
 
 
-def bundle(entry_html, output, embed_remote, indent_unit=None, keep_jsdoc=False):
+def bundle(entry_html, output, embed_remote, indent_unit=None, keep_jsdoc=False, eol="\r\n"):
     base = entry_html.parent
     html = read_text(entry_html)
     unit = indent_unit or detect_indent_unit(html)
@@ -432,7 +432,7 @@ def bundle(entry_html, output, embed_remote, indent_unit=None, keep_jsdoc=False)
     html = LINK_TAG_RE.sub(inline_link, html)
     html = SCRIPT_TAG_RE.sub(inline_script, html)
 
-    with open(output, "w", encoding="utf-8", newline="\n") as out:
+    with open(output, "w", encoding="utf-8", newline=eol) as out:
         out.write(html)
     print("\nWrote %s (%.0f KB)" % (output, output.stat().st_size / 1024))
 
@@ -459,6 +459,12 @@ def main():
         metavar="auto|tab|N",
         help="indent unit for the whole output: tab (default), auto (match the HTML), or N spaces",
     )
+    parser.add_argument(
+        "--eol",
+        choices=("crlf", "lf"),
+        default="crlf",
+        help="line endings of the output (default: crlf)",
+    )
     args = parser.parse_args()
 
     if args.indent == "auto":
@@ -482,7 +488,8 @@ def main():
         return 1
 
     print("Bundling %s -> %s" % (entry_html.name, output.name))
-    bundle(entry_html, output, args.embed_remote, indent_unit, args.keep_jsdoc)
+    eol = "\r\n" if args.eol == "crlf" else "\n"
+    bundle(entry_html, output, args.embed_remote, indent_unit, args.keep_jsdoc, eol)
     return 0
 
 
