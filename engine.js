@@ -588,7 +588,18 @@ export class Rasterizer {
         this.ctx = ctx;
         this.asciiParagraph = asciiParagraph;
 
-        this.updateResolution(canvasWidth, canvasHeight);
+        this.canvasWidth = canvasWidth;
+        this.canvasHeight = canvasHeight;
+
+        this.imageData = this.ctx.createImageData(this.canvasWidth, this.canvasHeight);
+        this.screenBuffer = this.imageData.data;
+        this.screenBuffer32 = new Uint32Array(this.imageData.data.buffer);
+        this.depthBuffer = new Float64Array(this.canvasWidth * this.canvasHeight);
+
+        this.clearScreen();
+
+        this.screenCenterX = Math.floor(this.canvasWidth / 2);
+        this.screenCenterY = Math.floor(this.canvasHeight / 2);
     }
 
     /**
