@@ -15,6 +15,7 @@ export class Triangle extends MathTriangle {
         super(vertices);
 
         this.uv = uv;
+        this.viewDistanceSquared = 0;
         this.worldVertices = [this.vertices[0].clone(), this.vertices[1].clone(), this.vertices[2].clone()];
         this.color = color;
         /** @type {Texture | null} */
@@ -187,18 +188,19 @@ export class Triangle extends MathTriangle {
             );
             if (currentRadius2 > triBoundingCircleRadius2) triBoundingCircleRadius2 = currentRadius2;
         }
-        const reach = pointLightRange + Math.sqrt(triBoundingCircleRadius2);
-
-        const triPlaneD = Vector3.dot(triWorldNormal, this.worldVertices[0]);
+        const totalRange = pointLightRange + Math.sqrt(triBoundingCircleRadius2);
 
         let count = 0;
         for (let i = 0; i < pointLights.length; i++) {
             const lightPos = pointLights[i].transform.position;
 
-            if (Vector3.dot(triWorldNormal, lightPos) <= triPlaneD) continue;
+            const toLightX = lightPos.x - triWorldCenterX;
+            const toLightY = lightPos.y - triWorldCenterY;
+            const toLightZ = lightPos.z - triWorldCenterZ;
+            if (triWorldNormal.x * toLightX + triWorldNormal.y * toLightY + triWorldNormal.z * toLightZ <= 0) continue;
 
             const lightDistance2 = MathExtend.hypotSquare(lightPos.x, lightPos.y, lightPos.z, triWorldCenterX, triWorldCenterY, triWorldCenterZ);
-            if (lightDistance2 > reach * reach) continue;
+            if (lightDistance2 > totalRange * totalRange) continue;
 
             outLights[count] = lightPos;
             count++;

@@ -495,7 +495,14 @@ function worldSpaceToViewSpace(objectTris) {
  * @param {Triangle[]} visibleTris
  */
 function sortNearestFirst(visibleTris) {
-    visibleTris.sort((a, b) => (a.vertices[0].z + a.vertices[1].z + a.vertices[2].z) / 3 - (b.vertices[0].z + b.vertices[1].z + b.vertices[2].z) / 3);
+    for (let tri of visibleTris) {
+        const vertices = tri.vertices;
+        const centerX = (vertices[0].x + vertices[1].x + vertices[2].x) / 3;
+        const centerY = (vertices[0].y + vertices[1].y + vertices[2].y) / 3;
+        const centerZ = (vertices[0].z + vertices[1].z + vertices[2].z) / 3;
+        tri.viewDistanceSquared = centerX * centerX + centerY * centerY + centerZ * centerZ;
+    }
+    visibleTris.sort((a, b) => a.viewDistanceSquared - b.viewDistanceSquared);
 }
 
 /** @param {Triangle[]} visibleTris */
@@ -627,36 +634,36 @@ function readResolution(input, min, max, current) {
     return Math.max(min, Math.min(max, value));
 }
 
-function applyRenderResolution() {
+function updateRenderResolution() {
     gameCanvas.width = useASCII ? asciiWidth : canvasRenderWidth;
     gameCanvas.height = useASCII ? asciiHeight : canvasRenderHeight;
 
     projectionMatrix = Mat4x4.Projection(fov, gameCanvas.height, gameCanvas.width, znear, zfar);
-    rasterizer.resize(gameCanvas.width, gameCanvas.height);
+    rasterizer.updateResolution(gameCanvas.width, gameCanvas.height);
     for (let portal of portals) {
         portal.resize(gameCanvas.width, gameCanvas.height);
     }
 }
 
-function applyCanvasResolution() {
+function readAndApplyResolutionInput() {
     canvasRenderWidth = readResolution(canvasResWidthInput, 16, 1920, canvasRenderWidth);
     canvasRenderHeight = readResolution(canvasResHeightInput, 16, 1440, canvasRenderHeight);
     canvasResWidthInput.value = canvasRenderWidth.toString();
     canvasResHeightInput.value = canvasRenderHeight.toString();
-    if (!useASCII) applyRenderResolution();
+    if (!useASCII) updateRenderResolution();
 }
-canvasResWidthInput.addEventListener("change", applyCanvasResolution);
-canvasResHeightInput.addEventListener("change", applyCanvasResolution);
+canvasResWidthInput.addEventListener("change", readAndApplyResolutionInput);
+canvasResHeightInput.addEventListener("change", readAndApplyResolutionInput);
 
-function applyAsciiResolution() {
+function readAndApplyASCIIResolutionInput() {
     asciiWidth = readResolution(asciiResWidthInput, 8, 500, asciiWidth);
     asciiHeight = readResolution(asciiResHeightInput, 8, 400, asciiHeight);
     asciiResWidthInput.value = asciiWidth.toString();
     asciiResHeightInput.value = asciiHeight.toString();
-    if (useASCII) applyRenderResolution();
+    if (useASCII) updateRenderResolution();
 }
-asciiResWidthInput.addEventListener("change", applyAsciiResolution);
-asciiResHeightInput.addEventListener("change", applyAsciiResolution);
+asciiResWidthInput.addEventListener("change", readAndApplyASCIIResolutionInput);
+asciiResHeightInput.addEventListener("change", readAndApplyASCIIResolutionInput);
 
 async function requestMouseLook() {
     try {
@@ -703,7 +710,7 @@ document.addEventListener("pointerlockchange", () => {
 
 asciiCheckBox.addEventListener("change", () => {
     useASCII = asciiCheckBox.checked;
-    applyRenderResolution();
+    updateRenderResolution();
     asciiParagraph.style.display = useASCII ? "" : "none";
     gameCanvas.style.display = useASCII ? "none" : "";
     mouseLookButton.style.display = useASCII ? "" : "none";

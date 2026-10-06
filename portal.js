@@ -124,7 +124,7 @@ export class Portal extends GameObject {
         this.renderTexture.width = canvasWidth;
         this.renderTexture.height = canvasHeight;
         this.renderTexture.pixels = new Uint8ClampedArray(canvasWidth * canvasHeight * 4);
-        this.rasterizer.resize(canvasWidth, canvasHeight);
+        this.rasterizer.updateResolution(canvasWidth, canvasHeight);
     }
 
     /** @param {Portal} otherPortal */

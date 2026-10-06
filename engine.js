@@ -64,7 +64,7 @@ export class Transform {
      */
     setParent(parent, worldPositionStays = true) {
         if (parent === this._parent) return;
-        if (parent != null && parent.isChildOf(this)) {
+        if (parent != null && parent.isDescendantOf(this)) {
             console.warn("Cannot parent " + this.name + " to " + parent.name + ": that would make a cycle");
             return;
         }
@@ -93,7 +93,7 @@ export class Transform {
     /**
      * @param {Transform} parent
      */
-    isChildOf(parent) {
+    isDescendantOf(parent) {
         /** @type {Transform | null} */
         let current = this;
         while (current != null) {
@@ -303,16 +303,16 @@ export class Camera {
      * @param {number} mouseMovementY
      */
     updateRotation(mouseMovementX, mouseMovementY) {
-        let rotation = Quaternion.multiply(Quaternion.buildQuaternionAxisAngle(Vector3.up, -mouseMovementX * this.sensitivity), this.transform.rotation);
+		let afterYawRotation = Quaternion.multiply(Quaternion.buildQuaternionAxisAngle(Vector3.up, -mouseMovementX * this.sensitivity), this.transform.rotation);
 
-        let pitchAngle = -mouseMovementY * this.sensitivity;
-        let forwardY = rotation.rotateVector(Vector3.forward).y;
-        let currentPitch = Math.asin(Math.max(-1, Math.min(1, forwardY))) * (180 / Math.PI);
-        pitchAngle = Math.max(-Camera.maxPitch - currentPitch, Math.min(Camera.maxPitch - currentPitch, pitchAngle));
+		let additionalPitchAngle = -mouseMovementY * this.sensitivity;
+		let forwardY = Math.max(-1, Math.min(1, afterYawRotation.rotateVector(Vector3.forward).y));
+		let currentPitch = Math.asin(forwardY) * (180 / Math.PI);
+		additionalPitchAngle = Math.max(-Camera.maxPitch - currentPitch, Math.min(Camera.maxPitch - currentPitch, additionalPitchAngle));
 
-        let right = rotation.rotateVector(Vector3.right);
-        this.transform.rotation = Quaternion.multiply(Quaternion.buildQuaternionAxisAngle(right, pitchAngle), rotation);
-    }
+		let right = afterYawRotation.rotateVector(Vector3.right);
+		this.transform.rotation = Quaternion.multiply(Quaternion.buildQuaternionAxisAngle(right, additionalPitchAngle), afterYawRotation);
+	}
 
     /**
      * @param {number} dt
@@ -418,14 +418,17 @@ export class GameObject {
     getTransformedTriangles() {
         /** @type {Triangle[]} */
         let transformedTris = [];
+        let scaleMat = this.transform.getScaleMatrix();
+        let rotation = this.transform.rotation;
+        let translationMat = this.transform.getTranslationMatrix();
         for (let tri of this.mesh.tris) {
             let transformedTri = tri.clone();
-            transformedTri.mulMat4x4(this.transform.getScaleMatrix());
-            transformedTri.rotate(this.transform.rotation);
-            transformedTri.mulMat4x4(this.transform.getTranslationMatrix());
+            transformedTri.mulMat4x4(scaleMat);
+            transformedTri.rotate(rotation);
+            transformedTri.mulMat4x4(translationMat);
             transformedTri.updateWorldVertices();
-            transformedTri.texture = this.texture;
             transformedTri.color = this.color;
+            transformedTri.texture = this.texture;
             transformedTri.gameObject = this;
             transformedTris.push(transformedTri);
         }
@@ -476,22 +479,24 @@ export class Rasterizer {
      * @param {CanvasRenderingContext2D} ctx
      * @param {HTMLParagraphElement | null} [asciiParagraph]
      */
-    constructor(canvasWidth, canvasHeight, ctx, asciiParagraph = null) {
-        this.canvasWidth = canvasWidth;
-        this.canvasHeight = canvasHeight;
+    constructor(canvasWidth, canvasHeight, ctx, asciiParagraph) {
         this.ctx = ctx;
         this.asciiParagraph = asciiParagraph;
 
+        this.canvasWidth = canvasWidth;
+        this.canvasHeight = canvasHeight;
+
         this.imageData = this.ctx.createImageData(this.canvasWidth, this.canvasHeight);
         this.screenBuffer = this.imageData.data;
+        this.screenBuffer32 = new Uint32Array(this.imageData.data.buffer);
         this.depthBuffer = new Float64Array(this.canvasWidth * this.canvasHeight);
 
-        this.screenBuffer.fill(255);
-        this.depthBuffer.fill(Infinity);
+        this.clearScreen();
 
         this.screenCenterX = Math.floor(this.canvasWidth / 2);
         this.screenCenterY = Math.floor(this.canvasHeight / 2);
-        /** @type {Triangle | null} */
+
+		/** @type {Triangle | null} */
         this.pointingTri = null;
         this.pointingPos = new Vector3(0, 0, 0);
         this.pointingPosNormal = new Vector3(0, 0, 0);
@@ -505,16 +510,16 @@ export class Rasterizer {
      * @param {Number} canvasWidth
      * @param {Number} canvasHeight
      */
-    resize(canvasWidth, canvasHeight) {
+    updateResolution(canvasWidth, canvasHeight) {
         this.canvasWidth = canvasWidth;
         this.canvasHeight = canvasHeight;
 
         this.imageData = this.ctx.createImageData(this.canvasWidth, this.canvasHeight);
         this.screenBuffer = this.imageData.data;
+        this.screenBuffer32 = new Uint32Array(this.imageData.data.buffer);
         this.depthBuffer = new Float64Array(this.canvasWidth * this.canvasHeight);
 
-        this.screenBuffer.fill(255);
-        this.depthBuffer.fill(Infinity);
+        this.clearScreen();
 
         this.screenCenterX = Math.floor(this.canvasWidth / 2);
         this.screenCenterY = Math.floor(this.canvasHeight / 2);
@@ -523,7 +528,7 @@ export class Rasterizer {
     /** @param {BoundingBox | null} [bbox] */
     clearScreen(bbox = null) {
         if (bbox == null) {
-            this.screenBuffer.fill(244);
+            this.screenBuffer32.fill(0xfff0f0f0);
             this.depthBuffer.fill(Infinity);
             return;
         }
@@ -555,12 +560,8 @@ export class Rasterizer {
         const depthBuffer = this.depthBuffer;
         const canvasWidth = this.canvasWidth;
         const canvasHeight = this.canvasHeight;
-        const activeLights = this.activeLights;
-        const pointLightRange2 = pointLightRange * pointLightRange;
-        const screenCenterX = this.screenCenterX,
-            screenCenterY = this.screenCenterY;
-
-        this.pointingTri = null;
+        /** @type {Vector3[]} */
+        const activeLights = new Array(maxActiveLights);
 
         for (let tri of tris) {
             let vertices = tri.vertices;
@@ -581,7 +582,6 @@ export class Rasterizer {
                 worldNormalZ = triWorldNormal.z;
 
             const dirLightDiffuse = (1 - (Vector3.dot(triWorldNormal, dirLight.dir) + 1) / 2) * dirLight.intensity;
-            const activeLightCount = pointLightIntensity > 0 ? tri.getPointLightsThatCanAffectTri(pointLightRange, pointLights, activeLights) : 0;
 
             let bbox = tri.boundingBox(canvasWidth, canvasHeight);
             if (renderBBox != null) {
@@ -633,6 +633,9 @@ export class Rasterizer {
                 perspectiveWorld2Y = world2.y * uv2W,
                 perspectiveWorld2Z = world2.z * uv2W;
 
+            const pointLightRangeSquare = pointLightRange * pointLightRange;
+            const activeLightCount = pointLightIntensity > 0 ? tri.getPointLightsThatCanAffectTri(pointLightRange, pointLights, activeLights) : 0;
+
             const triColor = tri.color;
             const triPortal = tri.portal;
             const texture = tri.texture;
@@ -664,33 +667,31 @@ export class Rasterizer {
                             const pixelWorldZ =
                                 (perspectiveWorld0Z * baryCoord0 + perspectiveWorld1Z * baryCoord1 + perspectiveWorld2Z * baryCoord2) / pixelInvZ;
 
-                            if (x == screenCenterX && y == screenCenterY) {
+                            if (x == this.screenCenterX && y == this.screenCenterY) {
                                 this.pointingTri = tri;
                                 this.pointingPos = new Vector3(pixelWorldX, pixelWorldY, pixelWorldZ);
                                 this.pointingPosNormal = triWorldNormal;
                             }
 
                             let totalPointLightDiffuse = 0;
-                            if (pointLightIntensity > 0) {
-                                for (let i = 0; i < activeLightCount; i++) {
-                                    const lightPos = activeLights[i];
-                                    const pointLightVecX = lightPos.x - pixelWorldX;
-                                    const pointLightVecY = lightPos.y - pixelWorldY;
-                                    const pointLightVecZ = lightPos.z - pixelWorldZ;
-                                    const distanceFromPixelToPointLight2 =
-                                        pointLightVecX * pointLightVecX + pointLightVecY * pointLightVecY + pointLightVecZ * pointLightVecZ;
-                                    if (distanceFromPixelToPointLight2 >= pointLightRange2) continue;
+                            for (let i = 0; i < activeLightCount; i++) {
+                                const lightPos = activeLights[i];
+                                const pointLightVecX = lightPos.x - pixelWorldX;
+                                const pointLightVecY = lightPos.y - pixelWorldY;
+                                const pointLightVecZ = lightPos.z - pixelWorldZ;
+                                const distanceFromPixelToPointLight2 =
+                                    pointLightVecX * pointLightVecX + pointLightVecY * pointLightVecY + pointLightVecZ * pointLightVecZ;
+                                if (distanceFromPixelToPointLight2 >= pointLightRangeSquare) continue;
 
-                                    const distance = Math.sqrt(distanceFromPixelToPointLight2);
-                                    const dot = (worldNormalX * pointLightVecX + worldNormalY * pointLightVecY + worldNormalZ * pointLightVecZ) / distance;
-                                    const currentPointLightDiffuse = (1 + dot) / 2;
-                                    const pointLightDistanceRatio = distanceFromPixelToPointLight2 / pointLightRange2;
-                                    const inverseSquareDistance = 1 / (1 + 0.02 * distanceFromPixelToPointLight2);
-                                    const attenuation = (1 - pointLightDistanceRatio) * inverseSquareDistance;
-                                    totalPointLightDiffuse += currentPointLightDiffuse * attenuation;
-                                }
-                                totalPointLightDiffuse *= pointLightIntensity;
+                                const distance = Math.sqrt(distanceFromPixelToPointLight2);
+                                const dot = (worldNormalX * pointLightVecX + worldNormalY * pointLightVecY + worldNormalZ * pointLightVecZ) / distance;
+                                const currentPointLightDiffuse = (1 + dot) / 2;
+                                const pointLightDistanceRatio = distanceFromPixelToPointLight2 / pointLightRangeSquare;
+                                const inverseSquareDistance = 1 / (1 + 0.02 * distanceFromPixelToPointLight2);
+                                const attenuation = (1 - pointLightDistanceRatio) * inverseSquareDistance;
+                                totalPointLightDiffuse += currentPointLightDiffuse * attenuation;
                             }
+                            totalPointLightDiffuse *= pointLightIntensity;
 
                             let lightIntensity = Math.max(ambientLight, dirLightDiffuse + totalPointLightDiffuse);
 
@@ -749,7 +750,8 @@ export class Rasterizer {
                 renderString += "\n";
             }
 
-            if (this.asciiParagraph != null && this.asciiParagraph.innerText != renderString) this.asciiParagraph.innerText = renderString;
+            if (this.asciiParagraph != null && this.asciiParagraph.innerText != renderString)
+                this.asciiParagraph.innerText = renderString;
         }
     }
 }

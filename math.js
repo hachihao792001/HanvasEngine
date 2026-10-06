@@ -233,6 +233,7 @@ export class Vector3 {
         return Vector3.dot(cross, axis) > 0 ? -angle : angle;
     }
 }
+
 Vector3.zero = new Vector3(0, 0, 0);
 Vector3.one = new Vector3(1, 1, 1);
 Vector3.left = new Vector3(-1, 0, 0);
@@ -309,7 +310,6 @@ export class Mat4x4 {
         matrix.m[3][3] = 1;
         return matrix;
     }
-
     /**
      *
      * @param {Vector3} pos
@@ -444,10 +444,10 @@ export class Quaternion {
         const sinC = Math.sin(c);
 
         return new Quaternion(
-            cosC * cosB * cosA + sinC * sinB * sinA,
-            -cosC * cosB * sinA + sinC * sinB * cosA,
-            -cosC * sinB * cosA - sinC * cosB * sinA,
-            -sinC * cosB * cosA + cosC * sinB * sinA,
+            cosC * cosB * cosA - sinC * sinB * sinA,
+            -cosC * cosB * sinA - sinC * sinB * cosA,
+            -cosC * sinB * cosA + sinC * cosB * sinA,
+            -sinC * cosB * cosA - cosC * sinB * sinA,
         );
     }
 
