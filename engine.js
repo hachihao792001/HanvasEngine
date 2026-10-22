@@ -297,16 +297,14 @@ export class Camera {
     /**
      * @param {number} zNear
      * @param {number} zFar
-     * @param {number} customZFar
      */
-    getFrustumCenter(zNear, zFar, customZFar = -1) {
-        let forward = this.transform.getForward();
+    getFrustumCenter(zNear, zFar) {
+		let forward = this.transform.getForward();
 
-        let near = Vector3.add(this.transform.position, Vector3.mul(forward, zNear));
-        if (customZFar == -1) customZFar = zFar;
-        let far = Vector3.add(this.transform.position, Vector3.mul(forward, customZFar));
-        return Vector3.div(Vector3.add(near, far), 2);
-    }
+		let near = Vector3.add(this.transform.position, Vector3.mul(forward, zNear));
+		let far = Vector3.add(this.transform.position, Vector3.mul(forward, zFar));
+		return Vector3.div(Vector3.add(near, far), 2);
+	}
 
     /**
      * @param {number} mouseMovementX
@@ -441,7 +439,7 @@ export class DirectionalLight {
         let up = Math.abs(Vector3.dot(this.dir, Vector3.up)) < 0.99 ? Vector3.up : Vector3.forward;
         let right = Vector3.cross(up, this.dir).normalize();
         up = Vector3.cross(this.dir, right).normalize();
-        //let frustumCenter = camera.getFrustumCenter(znear, zfar, shadowMapDistance);
+        //let frustumCenter = camera.getFrustumCenter(znear, shadowMapDistance);
         let frustumCenter = Vector3.zero;
         let lightPos = Vector3.sub(frustumCenter, Vector3.mul(this.dir, shadowMapDistance));
         this.viewMatrix = Mat4x4.View(right, up, this.dir, lightPos);
@@ -767,7 +765,7 @@ export class Rasterizer {
                             }
                             totalPointLightDiffuse *= pointLightIntensity;
 
-                            const lightIntensity = Math.max(ambientLight, (dirLightDiffuse + totalPointLightDiffuse) * shadowFactor);
+                            const lightIntensity = Math.max(ambientLight, dirLightDiffuse * shadowFactor + totalPointLightDiffuse);
 
                             let texR = triColor.r,
                                 texG = triColor.g,
